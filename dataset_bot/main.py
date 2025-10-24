@@ -4,7 +4,7 @@ from config import BOT_TOKEN
 
 bot=telebot.TeleBot(BOT_TOKEN)
 
-conn = sqlite3.connect("memes.db")
+conn = sqlite3.connect("data/memes.db")
 cursor = conn.cursor()
 
 cursor.execute("""
@@ -27,7 +27,7 @@ conn.commit()
 conn.close()
 
 def get_current_state(user_id):
-  conn = sqlite3.connect("memes.db")
+  conn = sqlite3.connect("data/memes.db")
   cursor = conn.cursor()
   cursor.execute("SELECT current_img FROM user_state WHERE user_id=?", (user_id,))
   rows = cursor.fetchall()
@@ -39,14 +39,14 @@ def get_current_state(user_id):
      return rows[0][0]
   
 def reset_state(user_id):
-  conn = sqlite3.connect("memes.db")
+  conn = sqlite3.connect("data/memes.db")
   cursor = conn.cursor()
   cursor.execute("DELETE FROM user_state WHERE user_id=?", (user_id,))
   conn.commit()
   conn.close()
 
 def set_state(user_id, img):
-  conn = sqlite3.connect("memes.db")
+  conn = sqlite3.connect("data/memes.db")
   cursor = conn.cursor()
   cursor.execute("INSERT INTO user_state (user_id, current_img) VALUES (?, ?)", (user_id, img))
   conn.commit()
@@ -70,7 +70,7 @@ def start_message(message):
 
 @bot.message_handler(commands=['view_all'])
 def view_all_message(message):
-  conn = sqlite3.connect("memes.db")
+  conn = sqlite3.connect("data/memes.db")
   cursor = conn.cursor()
   cursor.execute("SELECT img_id, text FROM memes")
   rows = cursor.fetchall()
@@ -85,7 +85,7 @@ def view_all_message(message):
 def view_last_message(message):
   user_id = message.from_user.id
 
-  conn = sqlite3.connect("memes.db")
+  conn = sqlite3.connect("data/memes.db")
   cursor = conn.cursor()
   cursor.execute("SELECT img_id, text FROM memes WHERE user_id=? ORDER BY id DESC LIMIT 1", (user_id,))
   rows = cursor.fetchall()
@@ -100,7 +100,7 @@ def view_last_message(message):
 def delete_last_message(message):
   user_id = message.from_user.id
 
-  conn = sqlite3.connect("memes.db")
+  conn = sqlite3.connect("data/memes.db")
   cursor = conn.cursor()
   cursor.execute("SELECT id FROM memes WHERE user_id=? ORDER BY id DESC LIMIT 1", (user_id,))
   rows = cursor.fetchall()
@@ -133,7 +133,7 @@ def text_message(message):
     user_id = message.from_user.id
 
     if get_current_state(user_id) is not None:
-      conn = sqlite3.connect("memes.db")
+      conn = sqlite3.connect("data/memes.db")
       cursor = conn.cursor()
       cursor.execute("INSERT INTO memes (user_id, img_id, text) VALUES (?, ?, ?)", (user_id, get_current_state(user_id), message.text))
       conn.commit()
