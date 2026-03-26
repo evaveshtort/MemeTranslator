@@ -12,3 +12,6 @@
 # IDE settings
 **/.vscode/
 **/.idea/
+
+#photos
+**/.jpg
