@@ -35,7 +35,7 @@ async def caption(img: Image.Image) -> str:
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
     buf.seek(0)
-    async with httpx.AsyncClient(timeout=300) as client:
+    async with httpx.AsyncClient(timeout=600) as client:
         r = await client.post(f"{VISION_URL}/caption", files={"file": ("img.jpg", buf, "image/jpeg")})
         r.raise_for_status()
         return r.json()["caption"]

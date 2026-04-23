@@ -4,6 +4,7 @@ from iopaint.schema import InpaintRequest
 import numpy as np
 import cv2
 
+model = ModelManager(name="lama", device="cpu")
 
 def remove_text(img: Image.Image, blocks: list) -> Image.Image:
     mask = Image.new("L", img.size, 0)
@@ -12,8 +13,6 @@ def remove_text(img: Image.Image, blocks: list) -> Image.Image:
     for block in blocks:
         x1, y1, x2, y2 = block["bbox"]
         draw.rectangle([x1, y1, x2, y2], fill=255)
-
-    model = ModelManager(name="lama", device="cpu")
 
     img_np = np.array(img)
     mask_np = np.array(mask)
