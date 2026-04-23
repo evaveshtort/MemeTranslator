@@ -4,3 +4,4 @@ uvicorn
 numpy
 opencv-python
 pillow
+python-multipart

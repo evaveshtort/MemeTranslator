@@ -10,7 +10,7 @@ async def ocr(img: Image.Image) -> dict:
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)
-    async with httpx.AsyncClient(timeout=60) as client:
+    async with httpx.AsyncClient(timeout=300) as client:
         r = await client.post(f"{OCR_URL}/ocr", files={"file": ("img.png", buf, "image/png")})
         r.raise_for_status()
         return r.json()
@@ -21,7 +21,7 @@ async def remove_text(img: Image.Image, blocks: list) -> Image.Image:
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)
-    async with httpx.AsyncClient(timeout=120) as client:
+    async with httpx.AsyncClient(timeout=300) as client:
         r = await client.post(
             f"{VISION_URL}/remove-text",
             files={"file": ("img.png", buf, "image/png")},
@@ -35,7 +35,7 @@ async def caption(img: Image.Image) -> str:
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
     buf.seek(0)
-    async with httpx.AsyncClient(timeout=120) as client:
+    async with httpx.AsyncClient(timeout=300) as client:
         r = await client.post(f"{VISION_URL}/caption", files={"file": ("img.jpg", buf, "image/jpeg")})
         r.raise_for_status()
         return r.json()["caption"]

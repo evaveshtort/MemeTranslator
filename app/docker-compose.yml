@@ -12,6 +12,8 @@ services:
       dockerfile: ocr_module/Dockerfile
     ports:
       - "8001:8001"
+    volumes:
+      - ./ocr_module:/app/ocr_module
 
   vision_service:
     build:
@@ -23,6 +25,8 @@ services:
       - ollama
     environment:
       - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      - ./vision_module:/app/vision_module
 
   api:
     build:
@@ -33,6 +37,8 @@ services:
     depends_on:
       - ocr_service
       - vision_service
+    volumes:
+      - ./api:/app/api
 
 volumes:
   ollama_data:
