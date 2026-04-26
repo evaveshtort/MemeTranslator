@@ -8,8 +8,6 @@ services:
     build:
       context: .
       dockerfile: ocr_module/Dockerfile
-    ports:
-      - "8001:8001"
     volumes:
       - ./ocr_module:/app/ocr_module
 
@@ -17,8 +15,6 @@ services:
     build:
       context: .
       dockerfile: vision_module/Dockerfile
-    ports:
-      - "8002:8002"
     depends_on:
       - ollama
     environment:
