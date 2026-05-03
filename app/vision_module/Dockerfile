@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
 COPY vision_module/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN iopaint start --model lama --device cpu --port 8080 --host 0.0.0.0 &sleep 60 && kill %1 || true
+RUN iopaint start --model lama --device cpu --port 8080 --host 0.0.0.0 &sleep 180 && kill %1 || true
 
 COPY vision_module/ /app/vision_module/
 
