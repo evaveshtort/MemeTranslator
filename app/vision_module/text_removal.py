@@ -4,7 +4,7 @@ from iopaint.schema import InpaintRequest
 import numpy as np
 import cv2
 
-model = ModelManager(name="lama", device="cpu")
+model = ModelManager(name="lama", device="cuda")
 
 def remove_text(img: Image.Image, blocks: list) -> Image.Image:
     mask = Image.new("L", img.size, 0)

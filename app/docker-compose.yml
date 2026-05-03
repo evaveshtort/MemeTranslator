@@ -1,8 +1,17 @@
 services:
   ollama:
-    image: ollama/ollama
-    volumes:
-      - ollama_data:/root/.ollama
+      image: ollama/ollama
+      deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                count: 1
+                capabilities: [gpu]
+      environment:
+        - NVIDIA_VISIBLE_DEVICES=all
+      volumes:
+        - ollama_data:/root/.ollama
 
   ocr_service:
     build:
@@ -12,15 +21,20 @@ services:
       - ./ocr_module:/app/ocr_module
 
   vision_service:
-    build:
-      context: .
-      dockerfile: vision_module/Dockerfile
-    depends_on:
-      - ollama
-    environment:
-      - OLLAMA_HOST=http://ollama:11434
-    volumes:
-      - ./vision_module:/app/vision_module
+      build:
+        context: .
+        dockerfile: vision_module/Dockerfile
+      deploy:
+        resources:
+          reservations:
+            devices:
+              - driver: nvidia
+                count: 1
+                capabilities: [gpu]
+      environment:
+        - OLLAMA_HOST=http://ollama:11434
+      volumes:
+        - ./vision_module:/app/vision_module
 
   api:
     build:
