@@ -22,6 +22,17 @@ services:
     volumes:
       - ./vision_module:/app/vision_module
 
+  translate_service:
+    build:
+      context: .
+      dockerfile: translate_module/Dockerfile
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      - ./translate_module:/app/translate_module
+
   api:
     build:
       context: .
@@ -31,6 +42,7 @@ services:
     depends_on:
       - ocr_service
       - vision_service
+      - translate_service
     volumes:
       - ./api:/app/api
 
