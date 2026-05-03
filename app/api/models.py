@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Text, DateTime
+from sqlalchemy import Column, String, Integer, Text, DateTime, Boolean
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 import uuid
 from .database import Base
@@ -8,7 +8,11 @@ class MemeRequest(Base):
     __tablename__ = "meme_requests"
 
     id      = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    card_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     user_id = Column(UUID(as_uuid=True), nullable=True)
+
+    deleted      = Column(Boolean, nullable=False, default=False)
+    current_step = Column(String(30), nullable=True)
 
     started_at          = Column(DateTime(timezone=True), nullable=False)
     ocr_done_at         = Column(DateTime(timezone=True), nullable=True)

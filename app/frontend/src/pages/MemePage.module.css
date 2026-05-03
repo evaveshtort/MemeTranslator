@@ -1,0 +1,135 @@
+.page {
+  min-height: 100vh;
+  padding-top: 72px;
+  display: flex;
+  justify-content: center;
+}
+
+.content {
+  width: 100%;
+  max-width: 680px;
+  padding: 0 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.img {
+  width: 100%;
+  border-radius: 8px;
+  display: block;
+}
+
+.text {
+  color: #ddd;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.explanation {
+  color: #888;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btnRegen {
+  background: #222;
+  color: #ccc;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnRegen:hover { background: #2a2a2a; }
+
+.btnDelete {
+  background: transparent;
+  color: #e55;
+  border: 1px solid #442222;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnDelete:hover { background: #1a0a0a; }
+
+button:disabled { opacity: 0.4; cursor: default; }
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding-top: 120px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #333;
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progressBox {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #444;
+  font-size: 14px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #333;
+  flex-shrink: 0;
+}
+
+.step.done { color: #666; }
+.step.done .dot { background: #555; }
+
+.step.active { color: #fff; }
+.step.active .dot {
+  background: #fff;
+  box-shadow: 0 0 6px #fff8;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.errorBox {
+  color: #e55;
+  background: #1a0808;
+  border-radius: 8px;
+  padding: 16px;
+  font-size: 14px;
+}

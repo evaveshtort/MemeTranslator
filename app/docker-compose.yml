@@ -43,12 +43,19 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
   api:
     build:
       context: .
       dockerfile: api/Dockerfile
-    ports:
-      - "8000:8000"
     depends_on:
       - ocr_service
       - vision_service

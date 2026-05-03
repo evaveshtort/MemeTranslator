@@ -1,0 +1,13 @@
+.grid {
+  columns: 3;
+  column-gap: 12px;
+  padding: 72px 16px 16px;
+}
+
+@media (max-width: 900px) {
+  .grid { columns: 2; }
+}
+
+@media (max-width: 500px) {
+  .grid { columns: 1; }
+}
