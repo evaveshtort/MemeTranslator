@@ -18,6 +18,15 @@ services:
     build:
       context: .
       dockerfile: ocr_module/Dockerfile
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
     volumes:
       - ./ocr_module:/app/ocr_module
 

@@ -24,6 +24,13 @@ class SuryaEngine:
         self._det = DetectionPredictor()
         self._rec = RecognitionPredictor(self._foundation)
 
+    def _unload(self) -> None:
+        import torch
+        self._foundation = None
+        self._det = None
+        self._rec = None
+        torch.cuda.empty_cache()
+
     def recognize(self, img: Image.Image) -> List[TextBlock]:
         self._init()
 
@@ -33,6 +40,7 @@ class SuryaEngine:
             det_predictor=self._det,
         )
 
+        self._unload()
         blocks = []
         for pred in predictions:
             for line in pred.text_lines:
