@@ -69,7 +69,6 @@ async def api_translate(
     clean_img = Image.open(io.BytesIO(await clean.read()))
     ocr_data = json.loads(ocr)
 
-    # Stage 1: humor analysis
     analysis_text = None
     last_err = None
     for _ in range(MAX_RETRIES):
@@ -89,7 +88,6 @@ async def api_translate(
             content={"error": f"humor_analysis failed after {MAX_RETRIES} retries: {last_err}"},
         )
 
-    # Stage 2: translation
     translation_data = None
     last_err = None
     for _ in range(MAX_RETRIES):
@@ -110,7 +108,6 @@ async def api_translate(
             content={"error": f"translation failed after {MAX_RETRIES} retries: {last_err}"},
         )
 
-    # Stage 3: text adding
     try:
         result_img = add_translated_text(
             original_img, clean_img, translation_data.get("blocks_en", [])
