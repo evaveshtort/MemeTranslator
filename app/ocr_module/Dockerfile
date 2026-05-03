@@ -4,8 +4,10 @@ RUN apt-get update && apt-get install -y \
     libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
-COPY ocr_module/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY ocr_module/requirements.txt ocr_module/constraints.txt ./
+RUN pip install --no-cache-dir \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    -r requirements.txt -c constraints.txt
 
 COPY ocr_module/ /app/ocr_module/
 
