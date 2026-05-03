@@ -5,10 +5,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ocr_module/requirements.txt .
-RUN pip install --no-cache-dir torch==2.6.0+cu124 \
+RUN pip install --no-cache-dir -r requirements.txt
+# torch 2.11.0 не поддерживает GTX 1060 (CC 6.1) — принудительно ставим 2.6.0+cu124
+RUN pip install --no-cache-dir --force-reinstall torch==2.6.0+cu124 \
     --index-url https://download.pytorch.org/whl/cu124
-    
-RUN grep -v "^torch" requirements.txt | pip install --no-cache-dir -r /dev/stdin
 
 COPY ocr_module/ /app/ocr_module/
 
