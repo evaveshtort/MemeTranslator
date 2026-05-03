@@ -26,7 +26,6 @@ def strip_json_markdown(text: str) -> str:
 
 
 def has_non_latin_letters(text: str) -> bool:
-    """True if text contains any letter that is not a-z / A-Z."""
     for ch in text:
         if unicodedata.category(ch).startswith("L") and not ("a" <= ch.lower() <= "z"):
             return True
@@ -34,7 +33,6 @@ def has_non_latin_letters(text: str) -> bool:
 
 
 def has_non_cyrillic_letters(text: str) -> bool:
-    """True if text contains any letter that is not Cyrillic (U+0400–U+04FF)."""
     for ch in text:
         if unicodedata.category(ch).startswith("L") and not ("Ѐ" <= ch <= "ӿ"):
             return True
@@ -69,8 +67,10 @@ async def api_translate(
     clean_img = Image.open(io.BytesIO(await clean.read()))
     ocr_data = json.loads(ocr)
 
+    # Stage 1: humor analysis
     analysis_text = None
     last_err = None
+    humor_retries = 0
     for _ in range(MAX_RETRIES):
         try:
             result = analyse_humor(str(ocr_data.get("blocks", [])), caption)
@@ -82,14 +82,17 @@ async def api_translate(
             break
         except Exception as e:
             last_err = e
+            humor_retries += 1
     if analysis_text is None:
         return JSONResponse(
             status_code=500,
             content={"error": f"humor_analysis failed after {MAX_RETRIES} retries: {last_err}"},
         )
 
+    # Stage 2: translation
     translation_data = None
     last_err = None
+    translation_retries = 0
     for _ in range(MAX_RETRIES):
         try:
             raw = translate_meme(ocr_data, analysis_text)
@@ -102,12 +105,14 @@ async def api_translate(
             break
         except Exception as e:
             last_err = e
+            translation_retries += 1
     if translation_data is None:
         return JSONResponse(
             status_code=500,
             content={"error": f"translation failed after {MAX_RETRIES} retries: {last_err}"},
         )
 
+    # Stage 3: text adding
     try:
         result_img = add_translated_text(
             original_img, clean_img, translation_data.get("blocks_en", [])
@@ -126,4 +131,6 @@ async def api_translate(
         "full_text_en": translation_data.get("full_text_en"),
         "blocks_en": translation_data.get("blocks_en"),
         "result_image_base64": result_base64,
+        "humor_retries": humor_retries,
+        "translation_retries": translation_retries,
     }

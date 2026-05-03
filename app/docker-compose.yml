@@ -33,6 +33,16 @@ services:
     volumes:
       - ./translate_module:/app/translate_module
 
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: memedb
+      POSTGRES_USER: meme
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -43,12 +53,15 @@ services:
       - ocr_service
       - vision_service
       - translate_service
+      - postgres
     environment:
       - S3_ACCESS_KEY=${S3_ACCESS_KEY}
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_BUCKET=${S3_BUCKET}
+      - DATABASE_URL=postgresql+asyncpg://meme:${POSTGRES_PASSWORD}@postgres:5432/memedb
     volumes:
       - ./api:/app/api
 
 volumes:
   ollama_data:
+  postgres_data:

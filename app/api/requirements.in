@@ -4,3 +4,5 @@ pillow
 httpx
 python-multipart
 boto3
+sqlalchemy[asyncio]
+asyncpg
