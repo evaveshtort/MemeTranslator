@@ -3,3 +3,4 @@ uvicorn
 pillow
 httpx
 python-multipart
+boto3

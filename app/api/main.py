@@ -5,6 +5,7 @@ import io
 import base64
 
 from .client import ocr, remove_text, caption, translate
+from .s3 import upload_image
 
 app = FastAPI()
 MAX_RETRIES = 3
@@ -57,14 +58,21 @@ async def process(file: UploadFile):
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": f"translate failed: {e}"})
 
-    buf = io.BytesIO()
-    clean_img.save(buf, format="PNG")
-    buf.seek(0)
-    img_base64 = base64.b64encode(buf.getvalue()).decode()
+    try:
+        clean_url = upload_image(clean_img, folder="memes/clean")
+        result_img = Image.open(io.BytesIO(base64.b64decode(translate_result["result_image_base64"])))
+        result_url = upload_image(result_img, folder="memes/result")
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": f"s3 upload failed: {e}"})
 
     return {
         "ocr": ocr_result,
         "caption": description,
-        "image_base64": img_base64,
-        **translate_result,
+        "clean_image_url": clean_url,
+        "analysis": translate_result.get("analysis"),
+        "explanation_ru": translate_result.get("explanation_ru"),
+        "explanation_en": translate_result.get("explanation_en"),
+        "full_text_en": translate_result.get("full_text_en"),
+        "blocks_en": translate_result.get("blocks_en"),
+        "result_image_url": result_url,
     }
