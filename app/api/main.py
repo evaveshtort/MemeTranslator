@@ -6,7 +6,7 @@ import base64
 
 from .client import ocr, remove_text, caption
 
-app = FastAPI()
+app = FastAPI(servers=[{"url": "/"}])
 
 @app.post("/process")
 async def process(file: UploadFile):
