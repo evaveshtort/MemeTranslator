@@ -7,7 +7,7 @@ import base64
 import unicodedata
 
 from .humor_analysis import analyse_humor
-from .translation import translate_meme
+from .translation import translate_meme, literal_translate
 from .text_adding import add_translated_text
 
 app = FastAPI()
@@ -67,6 +67,10 @@ async def api_translate(
     clean_img = Image.open(io.BytesIO(await clean.read()))
     ocr_data = json.loads(ocr)
 
+    # Literal translation (fast, used as reference in Stage 2 prompt)
+    ocr_texts = [b["text"] for b in ocr_data.get("blocks", [])]
+    literal_translations = literal_translate(ocr_texts)
+
     # Stage 1: humor analysis
     analysis_text = None
     last_err = None
@@ -95,7 +99,7 @@ async def api_translate(
     translation_retries = 0
     for _ in range(MAX_RETRIES):
         try:
-            raw = translate_meme(ocr_data, analysis_text)
+            raw = translate_meme(ocr_data, analysis_text, literal_translations)
             raw = strip_json_markdown(raw)
             if not raw:
                 raise ValueError("Empty result")
@@ -126,6 +130,7 @@ async def api_translate(
 
     return {
         "analysis": analysis_text,
+        "literal_translation": " / ".join(t for t in literal_translations if t),
         "explanation_ru": translation_data.get("explanation_ru"),
         "explanation_en": translation_data.get("explanation_en"),
         "full_text_en": translation_data.get("full_text_en"),

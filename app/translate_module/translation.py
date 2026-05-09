@@ -1,15 +1,63 @@
 from ollama import Client
+import ctranslate2
+import sentencepiece as spm
 import os
 
 client = Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
 
+_MODEL_DIR = os.environ.get("OPUS_MT_MODEL_DIR", "/models/opus-mt-ru-en")
+_translator = None
+_sp_source = None
+_sp_target = None
 
-def make_translation_prompt(analysis_text: str, ocr: dict) -> str:
+
+def _load_model():
+    global _translator, _sp_source, _sp_target
+    if _translator is None:
+        _translator = ctranslate2.Translator(_MODEL_DIR, device="cpu", inter_threads=2)
+        _sp_source = spm.SentencePieceProcessor()
+        _sp_source.Load(os.path.join(_MODEL_DIR, "source.spm"))
+        _sp_target = spm.SentencePieceProcessor()
+        _sp_target.Load(os.path.join(_MODEL_DIR, "target.spm"))
+    return _translator, _sp_source, _sp_target
+
+
+def literal_translate(texts: list[str]) -> list[str]:
+    if not texts:
+        return []
+    try:
+        translator, sp_src, sp_tgt = _load_model()
+        tokenized = [sp_src.Encode(t, out_type=str) for t in texts]
+        results = translator.translate_batch(tokenized)
+        return [sp_tgt.Decode(r.hypotheses[0]) for r in results]
+    except Exception:
+        return [""] * len(texts)
+
+
+def make_translation_prompt(analysis_text: str, ocr: dict, literal_translations: list[str] | None = None) -> str:
     blocks = ocr.get("blocks", [])
     blocks_formatted = "\n".join(
         f"  bbox={b['bbox']}, text=\"{b['text']}\"" for b in blocks
     )
     coords_list = [b["bbox"] for b in blocks]
+
+    if literal_translations and len(literal_translations) == len(blocks):
+        literal_formatted = "\n".join(
+            f"  bbox={b['bbox']}, ru=\"{b['text']}\", literal_en=\"{lit}\""
+            for b, lit in zip(blocks, literal_translations)
+        )
+        literal_section = f"""LITERAL TRANSLATION (word-for-word machine translation, for reference only):
+{literal_formatted}
+
+This is a rough literal translation — grammar and phrasing may be awkward.
+Use it as a semantic anchor to verify meaning:
+- DO use it to confirm you haven't dropped words, negations, or changed the meaning
+- DO use it as a starting point for choosing the right English vocabulary
+- Do NOT copy it verbatim — your job is to make the final translation fluent and natural
+
+"""
+    else:
+        literal_section = ""
 
     return f"""
 Translate a Russian meme into natural English.
@@ -23,7 +71,7 @@ OUTPUT:
 OCR BLOCKS (ONLY text to translate):
 {blocks_formatted}
 
-ANALYSIS (context only, do NOT translate):
+{literal_section}ANALYSIS (context only, do NOT translate):
 {analysis_text}
 
 ----------------------------------------
@@ -133,10 +181,10 @@ FINAL CHECK:
 """
 
 
-def translate_meme(ocr: dict, analysis_text: str) -> str:
+def translate_meme(ocr: dict, analysis_text: str, literal_translations: list[str] | None = None) -> str:
     response = client.chat(
         model="qwen2.5:7b-instruct",
-        messages=[{"role": "user", "content": make_translation_prompt(analysis_text, ocr)}],
+        messages=[{"role": "user", "content": make_translation_prompt(analysis_text, ocr, literal_translations)}],
         options={"temperature": 0.3},
     )
     return response.message.content

@@ -20,6 +20,8 @@ click==8.3.3
     # via uvicorn
 colorama==0.4.6
     # via click
+ctranslate2==4.7.1
+    # via -r requirements.in
 fastapi==0.136.1
     # via -r requirements.in
 h11==0.16.0
@@ -37,6 +39,7 @@ idna==3.13
 numpy==2.4.4
     # via
     #   -r requirements.in
+    #   ctranslate2
     #   opencv-python-headless
 ollama==0.6.2
     # via -r requirements.in
@@ -51,6 +54,10 @@ pydantic==2.13.3
 pydantic-core==2.46.3
     # via pydantic
 python-multipart==0.0.27
+    # via -r requirements.in
+pyyaml==6.0.3
+    # via ctranslate2
+sentencepiece==0.2.1
     # via -r requirements.in
 starlette==1.0.0
     # via fastapi
@@ -68,3 +75,6 @@ typing-inspection==0.4.2
     #   pydantic
 uvicorn==0.46.0
     # via -r requirements.in
+
+# The following packages are considered to be unsafe in a requirements file:
+# setuptools
