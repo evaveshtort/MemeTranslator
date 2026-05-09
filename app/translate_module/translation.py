@@ -30,8 +30,9 @@ def literal_translate(texts: list[str]) -> list[str]:
         tokenized = [sp_src.Encode(t, out_type=str) for t in texts]
         results = translator.translate_batch(
             tokenized,
-            no_repeat_ngram_size=3,
-            repetition_penalty=1.2,
+            no_repeat_ngram_size=4,
+            repetition_penalty=1.5,
+            beam_size=2,
         )
         return [sp_tgt.Decode(r.hypotheses[0]) for r in results]
     except Exception:
