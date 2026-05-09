@@ -28,7 +28,11 @@ def literal_translate(texts: list[str]) -> list[str]:
     try:
         translator, sp_src, sp_tgt = _load_model()
         tokenized = [sp_src.Encode(t, out_type=str) for t in texts]
-        results = translator.translate_batch(tokenized)
+        results = translator.translate_batch(
+            tokenized,
+            no_repeat_ngram_size=3,
+            repetition_penalty=1.2,
+        )
         return [sp_tgt.Decode(r.hypotheses[0]) for r in results]
     except Exception:
         return [""] * len(texts)
