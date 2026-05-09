@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
 COPY translate_module/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --no-cache-dir transformers torch --index-url https://download.pytorch.org/whl/cpu && \
+RUN pip install --no-cache-dir transformers torch --extra-index-url https://download.pytorch.org/whl/cpu && \
     ct2-transformers-converter \
         --model Helsinki-NLP/opus-mt-ru-en \
         --output_dir /models/opus-mt-ru-en \
