@@ -108,7 +108,6 @@ def _meme_to_dict(r: MemeRequest) -> dict:
 async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
     img = Image.open(io.BytesIO(raw))
 
-    # OCR
     await _update(record_id, current_step="ocr")
     try:
         ocr_result, ocr_retries = await call_with_retry(ocr, img, validate=_validate_ocr)
@@ -124,7 +123,7 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
         current_step="remove_text",
     )
 
-    # Удаление текста
+
     try:
         clean_img, _ = await call_with_retry(remove_text, img, ocr_result["blocks"])
     except Exception as e:
@@ -136,7 +135,7 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
         current_step="caption",
     )
 
-    # Описание
+
     try:
         description, caption_retries = await call_with_retry(caption, clean_img, validate=_validate_caption)
     except Exception as e:
@@ -150,7 +149,6 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
         current_step="translate",
     )
 
-    # Перевод
     try:
         translate_result, _ = await call_with_retry(translate, img, clean_img, ocr_result, description)
     except Exception as e:
@@ -267,7 +265,6 @@ async def regenerate_meme(card_id: uuid.UUID, background_tasks: BackgroundTasks)
         old.deleted = True
         await session.commit()
 
-    # Скачиваем оригинал из S3
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.get(original_url)
         resp.raise_for_status()

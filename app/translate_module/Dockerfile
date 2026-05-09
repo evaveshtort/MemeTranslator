@@ -8,13 +8,12 @@ RUN apt-get update && apt-get install -y \
 COPY translate_module/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Download and convert opus-mt-ru-en to CTranslate2 format at build time
-RUN pip install --no-cache-dir transformers && \
+RUN pip install --no-cache-dir transformers torch --index-url https://download.pytorch.org/whl/cpu && \
     ct2-transformers-converter \
         --model Helsinki-NLP/opus-mt-ru-en \
         --output_dir /models/opus-mt-ru-en \
         --force && \
-    pip uninstall -y transformers && \
+    pip uninstall -y transformers torch && \
     pip cache purge
 
 COPY translate_module/ /app/translate_module/

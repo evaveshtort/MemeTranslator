@@ -91,7 +91,7 @@ async def api_translate(
             content={"error": f"humor_analysis failed after {MAX_RETRIES} retries: {last_err}"},
         )
 
-    # Stage 2: translation
+
     translation_data = None
     last_err = None
     translation_retries = 0
