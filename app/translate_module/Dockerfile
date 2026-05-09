@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir transformers torch --extra-index-url https://down
         --model Helsinki-NLP/opus-mt-ru-en \
         --output_dir /models/opus-mt-ru-en \
         --force && \
+    python -c "from huggingface_hub import hf_hub_download; \
+        hf_hub_download('Helsinki-NLP/opus-mt-ru-en', 'source.spm', local_dir='/models/opus-mt-ru-en'); \
+        hf_hub_download('Helsinki-NLP/opus-mt-ru-en', 'target.spm', local_dir='/models/opus-mt-ru-en')" && \
     pip uninstall -y transformers torch && \
     pip cache purge
 
