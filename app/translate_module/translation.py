@@ -22,37 +22,35 @@ def _load_model():
     return _translator, _sp_source, _sp_target
 
 
-def literal_translate(texts: list[str]) -> list[str]:
+def literal_translate(texts: list[str]) -> str:
     if not texts:
-        return []
+        return ""
     try:
         translator, sp_src, sp_tgt = _load_model()
-        tokenized = [sp_src.Encode(t, out_type=str) for t in texts]
+        full_text = " / ".join(t for t in texts if t)
+        tokenized = sp_src.Encode(full_text, out_type=str)
+        max_len = len(tokenized) * 3 + 15
         results = translator.translate_batch(
-            tokenized,
-            no_repeat_ngram_size=4,
-            repetition_penalty=1.5,
-            beam_size=2,
+            [tokenized],
+            no_repeat_ngram_size=3,
+            repetition_penalty=1.3,
+            max_decoding_length=max_len,
         )
-        return [sp_tgt.Decode(r.hypotheses[0]) for r in results]
+        return sp_tgt.Decode(results[0].hypotheses[0])
     except Exception:
-        return [""] * len(texts)
+        return ""
 
 
-def make_translation_prompt(analysis_text: str, ocr: dict, literal_translations: list[str] | None = None) -> str:
+def make_translation_prompt(analysis_text: str, ocr: dict, literal: str = "") -> str:
     blocks = ocr.get("blocks", [])
     blocks_formatted = "\n".join(
         f"  bbox={b['bbox']}, text=\"{b['text']}\"" for b in blocks
     )
     coords_list = [b["bbox"] for b in blocks]
 
-    if literal_translations and len(literal_translations) == len(blocks):
-        literal_formatted = "\n".join(
-            f"  bbox={b['bbox']}, ru=\"{b['text']}\", literal_en=\"{lit}\""
-            for b, lit in zip(blocks, literal_translations)
-        )
+    if literal:
         literal_section = f"""LITERAL TRANSLATION (word-for-word machine translation, for reference only):
-{literal_formatted}
+"{literal}"
 
 This is a rough literal translation — grammar and phrasing may be awkward.
 Use it as a semantic anchor to verify meaning:
@@ -186,10 +184,10 @@ FINAL CHECK:
 """
 
 
-def translate_meme(ocr: dict, analysis_text: str, literal_translations: list[str] | None = None) -> str:
+def translate_meme(ocr: dict, analysis_text: str, literal: str = "") -> str:
     response = client.chat(
         model="qwen2.5:7b-instruct",
-        messages=[{"role": "user", "content": make_translation_prompt(analysis_text, ocr, literal_translations)}],
+        messages=[{"role": "user", "content": make_translation_prompt(analysis_text, ocr, literal)}],
         options={"temperature": 0.3},
     )
     return response.message.content
