@@ -8,9 +8,15 @@ RUN apt-get update && apt-get install -y \
 COPY translate_module/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Convert opus-mt-ru-en to CTranslate2 format at build time (not at runtime)
+# Download and convert opus-mt-ru-en to CTranslate2 format at build time
 RUN pip install --no-cache-dir transformers && \
-    ct2-marian-converter --model Helsinki-NLP/opus-mt-ru-en --output_dir /models/opus-mt-ru-en --force && \
+    python -c "from huggingface_hub import snapshot_download; snapshot_download('Helsinki-NLP/opus-mt-ru-en', local_dir='/tmp/opus-mt')" && \
+    ct2-marian-converter \
+        --model_path /tmp/opus-mt \
+        --vocab_paths /tmp/opus-mt/source.spm /tmp/opus-mt/target.spm \
+        --output_dir /models/opus-mt-ru-en \
+        --force && \
+    rm -rf /tmp/opus-mt && \
     pip uninstall -y transformers && \
     pip cache purge
 

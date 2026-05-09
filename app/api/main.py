@@ -37,9 +37,6 @@ app.add_middleware(
 )
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _validate_ocr(result: dict) -> None:
     if not result.get("full_text", "").strip():
@@ -107,10 +104,6 @@ def _meme_to_dict(r: MemeRequest) -> dict:
         "error": r.error,
     }
 
-
-# ---------------------------------------------------------------------------
-# Pipeline (runs as background task)
-# ---------------------------------------------------------------------------
 
 async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
     img = Image.open(io.BytesIO(raw))
@@ -197,10 +190,6 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
         current_step="done",
     )
 
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 
 @app.post("/process")
 async def process(file: UploadFile, background_tasks: BackgroundTasks):
