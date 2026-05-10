@@ -30,6 +30,7 @@ services:
       - ollama
     environment:
       - OLLAMA_HOST=http://ollama:11434
+      - YANDEX_TRANSLATE_KEY=${YANDEX_TRANSLATE_KEY}
     volumes:
       - ./translate_module:/app/translate_module
 

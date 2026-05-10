@@ -1,42 +1,28 @@
 from ollama import Client
-import ctranslate2
-import sentencepiece as spm
+import httpx
 import os
 
 client = Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
 
-_MODEL_DIR = os.environ.get("OPUS_MT_MODEL_DIR", "/models/opus-mt-ru-en")
-_translator = None
-_sp_source = None
-_sp_target = None
-
-
-def _load_model():
-    global _translator, _sp_source, _sp_target
-    if _translator is None:
-        _translator = ctranslate2.Translator(_MODEL_DIR, device="cpu", inter_threads=2)
-        _sp_source = spm.SentencePieceProcessor()
-        _sp_source.Load(os.path.join(_MODEL_DIR, "source.spm"))
-        _sp_target = spm.SentencePieceProcessor()
-        _sp_target.Load(os.path.join(_MODEL_DIR, "target.spm"))
-    return _translator, _sp_source, _sp_target
+_YANDEX_URL = "https://translate.api.cloud.yandex.net/translate/v2/translate"
 
 
 def literal_translate(texts: list[str]) -> str:
     if not texts:
         return ""
+    api_key = os.environ.get("YANDEX_TRANSLATE_KEY", "")
+    if not api_key:
+        return ""
     try:
-        translator, sp_src, sp_tgt = _load_model()
         full_text = " / ".join(t for t in texts if t)
-        tokenized = sp_src.Encode(full_text, out_type=str)
-        max_len = len(tokenized) * 3 + 15
-        results = translator.translate_batch(
-            [tokenized],
-            no_repeat_ngram_size=3,
-            repetition_penalty=1.3,
-            max_decoding_length=max_len,
+        response = httpx.post(
+            _YANDEX_URL,
+            headers={"Authorization": f"Api-Key {api_key}"},
+            json={"texts": [full_text], "sourceLanguageCode": "ru", "targetLanguageCode": "en"},
+            timeout=10,
         )
-        return sp_tgt.Decode(results[0].hypotheses[0])
+        response.raise_for_status()
+        return response.json()["translations"][0]["text"]
     except Exception:
         return ""
 

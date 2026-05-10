@@ -5,5 +5,3 @@ opencv-python-headless
 numpy
 python-multipart
 ollama
-ctranslate2
-sentencepiece
