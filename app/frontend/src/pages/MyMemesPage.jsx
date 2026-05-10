@@ -50,7 +50,7 @@ export default function MyMemesPage() {
   }
 
   return (
-    <div>
+    <div style={{ paddingTop: 52 }}>
       {errors.length > 0 && (
         <div className={styles.errorBanner}>
           <div className={styles.errorBannerTitle}>Ошибки обработки</div>
