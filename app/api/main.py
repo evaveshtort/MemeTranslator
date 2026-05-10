@@ -398,6 +398,22 @@ async def search_memes(q: str, limit: int = 20):
     return [dict(r) for r in records]
 
 
+@app.get("/memes/my")
+async def my_memes(user=Depends(required_user)):
+    async with AsyncSessionLocal() as session:
+        rows = await session.execute(
+            text("""
+                SELECT DISTINCT ON (card_id) *
+                FROM meme_requests
+                WHERE deleted = false AND user_id = :uid
+                ORDER BY card_id, started_at DESC
+            """),
+            {"uid": user["id"]},
+        )
+        records = rows.mappings().all()
+    return [dict(r) for r in records]
+
+
 @app.get("/memes/{card_id}")
 async def get_meme(card_id: uuid.UUID):
     async with AsyncSessionLocal() as session:
@@ -528,19 +544,3 @@ async def login(body: AuthBody):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_token(str(user.id), user.email)
     return {"token": token, "user": {"id": str(user.id), "email": user.email}}
-
-
-@app.get("/memes/my")
-async def my_memes(user=Depends(required_user)):
-    async with AsyncSessionLocal() as session:
-        rows = await session.execute(
-            text("""
-                SELECT DISTINCT ON (card_id) *
-                FROM meme_requests
-                WHERE deleted = false AND user_id = :uid
-                ORDER BY card_id, started_at DESC
-            """),
-            {"uid": user["id"]},
-        )
-        records = rows.mappings().all()
-    return [dict(r) for r in records]
