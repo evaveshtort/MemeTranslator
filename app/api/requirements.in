@@ -9,4 +9,4 @@ asyncpg
 fastembed
 pgvector
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt

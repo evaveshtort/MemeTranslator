@@ -17,7 +17,7 @@ anyio==4.13.0
 asyncpg==0.31.0
     # via -r requirements.in
 bcrypt==5.0.0
-    # via passlib
+    # via -r requirements.in
 boto3==1.43.2
     # via -r requirements.in
 botocore==1.43.2
@@ -102,8 +102,6 @@ packaging==26.2
     # via
     #   huggingface-hub
     #   onnxruntime
-passlib[bcrypt]==1.7.4
-    # via -r requirements.in
 pgvector==0.4.2
     # via -r requirements.in
 pillow==12.2.0
