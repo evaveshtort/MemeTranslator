@@ -1,0 +1,32 @@
+.searchBar {
+  position: sticky;
+  top: 52px;
+  z-index: 50;
+  background: #111;
+  padding: 12px 20px;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.searchInput {
+  width: 100%;
+  max-width: 600px;
+  display: block;
+  margin: 0 auto;
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 8px;
+  padding: 9px 14px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.searchInput:focus {
+  border-color: #555;
+}
+
+.searchInput::placeholder {
+  color: #555;
+}

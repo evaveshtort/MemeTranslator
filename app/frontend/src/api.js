@@ -20,6 +20,12 @@ export async function uploadMeme(file) {
   return r.json()
 }
 
+export async function searchMemes(q) {
+  const r = await fetch(`${BASE}/memes/search?q=${encodeURIComponent(q)}`)
+  if (!r.ok) throw new Error('Search failed')
+  return r.json()
+}
+
 export async function deleteMeme(cardId) {
   const r = await fetch(`${BASE}/memes/${cardId}`, { method: 'DELETE' })
   if (!r.ok) throw new Error('Delete failed')
