@@ -1,5 +1,6 @@
 from sqlalchemy import Column, String, Integer, Text, DateTime, Boolean
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID, JSONB, TSVECTOR
+from pgvector.sqlalchemy import Vector
 import uuid
 from .database import Base
 
@@ -39,6 +40,9 @@ class MemeRequest(Base):
     original_image_url = Column(Text, nullable=True)
     clean_image_url    = Column(Text, nullable=True)
     result_image_url   = Column(Text, nullable=True)
+
+    search_vector    = Column(TSVECTOR, nullable=True)
+    search_embedding = Column(Vector(384), nullable=True)
 
     status = Column(String(20), nullable=False, default="processing")
     error  = Column(Text, nullable=True)

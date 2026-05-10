@@ -5,7 +5,9 @@
 #    pip-compile requirements.in
 #
 annotated-doc==0.0.4
-    # via fastapi
+    # via
+    #   fastapi
+    #   typer
 annotated-types==0.7.0
     # via pydantic
 anyio==4.13.0
@@ -24,52 +26,123 @@ certifi==2026.4.22
     # via
     #   httpcore
     #   httpx
+    #   requests
+charset-normalizer==3.4.7
+    # via requests
 click==8.3.3
-    # via uvicorn
+    # via
+    #   typer
+    #   uvicorn
 colorama==0.4.6
-    # via click
+    # via
+    #   click
+    #   loguru
+    #   tqdm
 fastapi==0.136.0
     # via -r requirements.in
+fastembed==0.8.0
+    # via -r requirements.in
+filelock==3.29.0
+    # via huggingface-hub
+flatbuffers==25.12.19
+    # via onnxruntime
+fsspec==2026.4.0
+    # via huggingface-hub
 greenlet==3.5.0
     # via sqlalchemy
 h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
+hf-xet==1.5.0
+    # via huggingface-hub
 httpcore==1.0.9
     # via httpx
 httpx==0.28.1
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   huggingface-hub
+huggingface-hub==1.14.0
+    # via
+    #   fastembed
+    #   tokenizers
 idna==3.13
     # via
     #   anyio
     #   httpx
+    #   requests
 jmespath==1.1.0
     # via
     #   boto3
     #   botocore
-pillow==12.2.0
+loguru==0.7.3
+    # via fastembed
+markdown-it-py==4.2.0
+    # via rich
+mdurl==0.1.2
+    # via markdown-it-py
+mmh3==5.2.1
+    # via fastembed
+numpy==2.4.4
+    # via
+    #   fastembed
+    #   onnxruntime
+    #   pgvector
+onnxruntime==1.26.0
+    # via fastembed
+packaging==26.2
+    # via
+    #   huggingface-hub
+    #   onnxruntime
+pgvector==0.4.2
     # via -r requirements.in
+pillow==12.2.0
+    # via
+    #   -r requirements.in
+    #   fastembed
+protobuf==7.34.1
+    # via onnxruntime
+py-rust-stemmers==0.1.5
+    # via fastembed
 pydantic==2.13.3
     # via fastapi
 pydantic-core==2.46.3
     # via pydantic
+pygments==2.20.0
+    # via rich
 python-dateutil==2.9.0.post0
     # via botocore
 python-multipart==0.0.26
     # via -r requirements.in
+pyyaml==6.0.3
+    # via huggingface-hub
+requests==2.33.1
+    # via fastembed
+rich==15.0.0
+    # via typer
 s3transfer==0.17.0
     # via boto3
+shellingham==1.5.4
+    # via typer
 six==1.17.0
     # via python-dateutil
 sqlalchemy[asyncio]==2.0.49
     # via -r requirements.in
 starlette==1.0.0
     # via fastapi
+tokenizers==0.23.1
+    # via fastembed
+tqdm==4.67.3
+    # via
+    #   fastembed
+    #   huggingface-hub
+typer==0.25.1
+    # via huggingface-hub
 typing-extensions==4.15.0
     # via
     #   anyio
     #   fastapi
+    #   huggingface-hub
     #   pydantic
     #   pydantic-core
     #   sqlalchemy
@@ -80,6 +153,10 @@ typing-inspection==0.4.2
     #   fastapi
     #   pydantic
 urllib3==2.6.3
-    # via botocore
+    # via
+    #   botocore
+    #   requests
 uvicorn==0.45.0
     # via -r requirements.in
+win32-setctime==1.2.0
+    # via loguru

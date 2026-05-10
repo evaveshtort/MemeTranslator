@@ -20,6 +20,16 @@ from .models import MemeRequest
 
 MAX_RETRIES = 3
 
+_embed_model = None
+
+
+def _embed_sync(query: str) -> list[float]:
+    global _embed_model
+    if _embed_model is None:
+        from fastembed import TextEmbedding
+        _embed_model = TextEmbedding("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+    return next(_embed_model.embed([query])).tolist()
+
 
 @asynccontextmanager
 async def lifespan(app):
@@ -80,6 +90,64 @@ async def _save(record: MemeRequest) -> None:
             await session.commit()
     except Exception as e:
         print(f"DB save failed: {e}", file=sys.stderr)
+
+
+async def _update_search_fields(record_id: uuid.UUID) -> None:
+    try:
+        async with AsyncSessionLocal() as session:
+            row = await session.execute(
+                text(
+                    "SELECT ocr_full_text, full_text_en, visual_context, "
+                    "explanation_ru, explanation_en FROM meme_requests WHERE id = :id"
+                ),
+                {"id": str(record_id)},
+            )
+            r = row.mappings().one_or_none()
+            if not r:
+                return
+
+            combined = " ".join(filter(None, [
+                r["ocr_full_text"], r["full_text_en"], r["visual_context"],
+                r["explanation_ru"], r["explanation_en"],
+            ]))
+            embedding_str = None
+            if combined.strip():
+                vec = await asyncio.get_event_loop().run_in_executor(None, _embed_sync, combined)
+                embedding_str = "[" + ",".join(f"{x:.8f}" for x in vec) + "]"
+
+            params = {
+                "ocr_text": r["ocr_full_text"] or "",
+                "exp_ru":   r["explanation_ru"] or "",
+                "full_en":  r["full_text_en"] or "",
+                "exp_en":   r["explanation_en"] or "",
+                "visual":   r["visual_context"] or "",
+                "id": str(record_id),
+            }
+            if embedding_str:
+                await session.execute(text("""
+                    UPDATE meme_requests SET
+                        search_vector =
+                            setweight(to_tsvector('russian', :ocr_text), 'A') ||
+                            setweight(to_tsvector('russian', :exp_ru),   'B') ||
+                            setweight(to_tsvector('english', :full_en),  'A') ||
+                            setweight(to_tsvector('english', :exp_en),   'B') ||
+                            setweight(to_tsvector('english', :visual),   'C'),
+                        search_embedding = :embed::vector
+                    WHERE id = :id
+                """), {**params, "embed": embedding_str})
+            else:
+                await session.execute(text("""
+                    UPDATE meme_requests SET search_vector =
+                        setweight(to_tsvector('russian', :ocr_text), 'A') ||
+                        setweight(to_tsvector('russian', :exp_ru),   'B') ||
+                        setweight(to_tsvector('english', :full_en),  'A') ||
+                        setweight(to_tsvector('english', :exp_en),   'B') ||
+                        setweight(to_tsvector('english', :visual),   'C')
+                    WHERE id = :id
+                """), params)
+            await session.commit()
+    except Exception as e:
+        print(f"Search index update failed: {e}", file=sys.stderr)
 
 
 def _meme_to_dict(r: MemeRequest) -> dict:
@@ -187,6 +255,7 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
         status="success",
         current_step="done",
     )
+    await _update_search_fields(record_id)
 
 
 @app.post("/process")
@@ -216,6 +285,79 @@ async def list_memes():
             """)
         )
         records = rows.mappings().all()
+    return [dict(r) for r in records]
+
+
+@app.get("/memes/search")
+async def search_memes(q: str, limit: int = 20):
+    if not q.strip():
+        return []
+
+    embedding_str = None
+    try:
+        vec = await asyncio.get_event_loop().run_in_executor(None, _embed_sync, q)
+        embedding_str = "[" + ",".join(f"{x:.8f}" for x in vec) + "]"
+    except Exception as e:
+        print(f"Embed failed: {e}", file=sys.stderr)
+
+    fts_condition = """
+        (search_vector @@ websearch_to_tsquery('russian', :q)
+         OR search_vector @@ websearch_to_tsquery('english', :q))
+    """
+    vec_condition = (
+        "search_embedding IS NOT NULL AND search_embedding <=> :embed::vector < 0.6"
+        if embedding_str else "false"
+    )
+    trgm_condition = """
+        similarity(
+            COALESCE(ocr_full_text,'') || ' ' || COALESCE(full_text_en,''),
+            :q
+        ) > 0.2
+    """
+    fts_score = """
+        COALESCE(ts_rank(search_vector,
+            websearch_to_tsquery('russian', :q) ||
+            websearch_to_tsquery('english', :q)
+        ), 0) * 3
+    """
+    vec_score = (
+        "COALESCE(1.0 - (search_embedding <=> :embed::vector), 0)"
+        if embedding_str else "0"
+    )
+    trgm_score = """
+        COALESCE(similarity(
+            COALESCE(ocr_full_text,'') || ' ' || COALESCE(full_text_en,''),
+            :q
+        ), 0)
+    """
+
+    sql = f"""
+        WITH latest AS (
+            SELECT DISTINCT ON (card_id) *
+            FROM meme_requests
+            WHERE deleted = false AND status = 'success'
+            ORDER BY card_id, started_at DESC
+        )
+        SELECT
+            id, card_id, status, current_step, started_at, completed_at,
+            ocr_full_text, visual_context, humor_analysis, literal_translation,
+            explanation_ru, explanation_en, full_text_en, blocks_en,
+            original_image_url, clean_image_url, result_image_url, error,
+            ({fts_score} + {vec_score} + {trgm_score}) AS score
+        FROM latest
+        WHERE {fts_condition} OR ({vec_condition}) OR ({trgm_condition})
+        ORDER BY score DESC
+        LIMIT :limit
+    """
+
+    params: dict = {"q": q, "limit": limit}
+    if embedding_str:
+        params["embed"] = embedding_str
+
+    async with AsyncSessionLocal() as session:
+        rows = await session.execute(text(sql), params)
+        records = rows.mappings().all()
+
     return [dict(r) for r in records]
 
 

@@ -35,7 +35,7 @@ services:
       - ./translate_module:/app/translate_module
 
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16-alpine
     environment:
       POSTGRES_DB: memedb
       POSTGRES_USER: meme
