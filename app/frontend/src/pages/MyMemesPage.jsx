@@ -67,7 +67,7 @@ export default function MyMemesPage() {
           Вы ещё не загружали мемы
         </div>
       ) : (
-        <MasonryGrid>
+        <MasonryGrid compact>
           {active.map(m => <MemeCard key={m.card_id} meme={m} />)}
         </MasonryGrid>
       )}

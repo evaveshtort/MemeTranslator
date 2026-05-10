@@ -4,6 +4,10 @@
   padding: 72px 16px 16px;
 }
 
+.compact {
+  padding-top: 16px;
+}
+
 @media (max-width: 900px) {
   .grid { columns: 2; }
 }
