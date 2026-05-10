@@ -93,6 +93,7 @@ async def _save(record: MemeRequest) -> None:
 
 
 async def _update_search_fields(record_id: uuid.UUID) -> None:
+    rid = str(record_id)
     try:
         async with AsyncSessionLocal() as session:
             row = await session.execute(
@@ -100,54 +101,55 @@ async def _update_search_fields(record_id: uuid.UUID) -> None:
                     "SELECT ocr_full_text, full_text_en, visual_context, "
                     "explanation_ru, explanation_en FROM meme_requests WHERE id = :id"
                 ),
-                {"id": str(record_id)},
+                {"id": rid},
             )
             r = row.mappings().one_or_none()
-            if not r:
-                return
+        if not r:
+            return
+    except Exception as e:
+        print(f"Search fields fetch failed: {e}", file=sys.stderr)
+        return
 
-            combined = " ".join(filter(None, [
-                r["ocr_full_text"], r["full_text_en"], r["visual_context"],
-                r["explanation_ru"], r["explanation_en"],
-            ]))
-            embedding_str = None
-            if combined.strip():
-                vec = await asyncio.get_event_loop().run_in_executor(None, _embed_sync, combined)
-                embedding_str = "[" + ",".join(f"{x:.8f}" for x in vec) + "]"
-
-            params = {
+    # Update search_vector (always)
+    try:
+        async with AsyncSessionLocal() as session:
+            await session.execute(text("""
+                UPDATE meme_requests SET search_vector =
+                    setweight(to_tsvector('russian', :ocr_text), 'A') ||
+                    setweight(to_tsvector('russian', :exp_ru),   'B') ||
+                    setweight(to_tsvector('english', :full_en),  'A') ||
+                    setweight(to_tsvector('english', :exp_en),   'B') ||
+                    setweight(to_tsvector('english', :visual),   'C')
+                WHERE id = :id
+            """), {
                 "ocr_text": r["ocr_full_text"] or "",
                 "exp_ru":   r["explanation_ru"] or "",
                 "full_en":  r["full_text_en"] or "",
                 "exp_en":   r["explanation_en"] or "",
                 "visual":   r["visual_context"] or "",
-                "id": str(record_id),
-            }
-            if embedding_str:
-                await session.execute(text("""
-                    UPDATE meme_requests SET
-                        search_vector =
-                            setweight(to_tsvector('russian', :ocr_text), 'A') ||
-                            setweight(to_tsvector('russian', :exp_ru),   'B') ||
-                            setweight(to_tsvector('english', :full_en),  'A') ||
-                            setweight(to_tsvector('english', :exp_en),   'B') ||
-                            setweight(to_tsvector('english', :visual),   'C'),
-                        search_embedding = :embed::vector
-                    WHERE id = :id
-                """), {**params, "embed": embedding_str})
-            else:
-                await session.execute(text("""
-                    UPDATE meme_requests SET search_vector =
-                        setweight(to_tsvector('russian', :ocr_text), 'A') ||
-                        setweight(to_tsvector('russian', :exp_ru),   'B') ||
-                        setweight(to_tsvector('english', :full_en),  'A') ||
-                        setweight(to_tsvector('english', :exp_en),   'B') ||
-                        setweight(to_tsvector('english', :visual),   'C')
-                    WHERE id = :id
-                """), params)
+                "id": rid,
+            })
             await session.commit()
     except Exception as e:
-        print(f"Search index update failed: {e}", file=sys.stderr)
+        print(f"search_vector update failed: {e}", file=sys.stderr)
+
+    # Update search_embedding (separately, so vector failure doesn't break FTS)
+    try:
+        combined = " ".join(filter(None, [
+            r["ocr_full_text"], r["full_text_en"], r["visual_context"],
+            r["explanation_ru"], r["explanation_en"],
+        ]))
+        if not combined.strip():
+            return
+        vec = await asyncio.get_event_loop().run_in_executor(None, _embed_sync, combined)
+        embedding_str = "[" + ",".join(f"{x:.8f}" for x in vec) + "]"
+        async with AsyncSessionLocal() as session:
+            await session.execute(text(
+                "UPDATE meme_requests SET search_embedding = CAST(:embed AS vector) WHERE id = :id"
+            ), {"embed": embedding_str, "id": rid})
+            await session.commit()
+    except Exception as e:
+        print(f"search_embedding update failed: {e}", file=sys.stderr)
 
 
 def _meme_to_dict(r: MemeRequest) -> dict:
@@ -305,7 +307,7 @@ async def search_memes(q: str, limit: int = 20):
          OR search_vector @@ websearch_to_tsquery('english', :q))
     """
     vec_condition = (
-        "search_embedding IS NOT NULL AND search_embedding <=> :embed::vector < 0.6"
+        "search_embedding IS NOT NULL AND search_embedding <=> CAST(:embed AS vector) < 0.6"
         if embedding_str else "false"
     )
     trgm_condition = """
@@ -321,7 +323,7 @@ async def search_memes(q: str, limit: int = 20):
         ), 0) * 3
     """
     vec_score = (
-        "COALESCE(1.0 - (search_embedding <=> :embed::vector), 0)"
+        "COALESCE(1.0 - (search_embedding <=> CAST(:embed AS vector)), 0)"
         if embedding_str else "0"
     )
     trgm_score = """
