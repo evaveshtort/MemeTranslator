@@ -29,6 +29,12 @@
 .tabs a:hover { color: #fff; }
 .tabs a.active { color: #fff; }
 
+.right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
 .langToggle {
   background: #222;
   border: none;
@@ -48,5 +54,47 @@
 }
 
 .sep { color: #333; }
-
 .selected { color: #fff !important; }
+
+.userMenu {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.email {
+  color: #666;
+  font-size: 13px;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutBtn {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #888;
+  font-size: 13px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.logoutBtn:hover { color: #fff; border-color: #555; }
+
+.authLinks {
+  display: flex;
+  gap: 16px;
+}
+
+.authLinks a {
+  color: #888;
+  text-decoration: none;
+  font-size: 14px;
+  transition: color 0.15s;
+}
+
+.authLinks a:hover { color: #fff; }
+.authLinks a.active { color: #fff; }

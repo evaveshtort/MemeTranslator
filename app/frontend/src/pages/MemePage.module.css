@@ -127,9 +127,22 @@ button:disabled { opacity: 0.4; cursor: default; }
 }
 
 .errorBox {
-  color: #e55;
   background: #1a0808;
   border-radius: 8px;
   padding: 16px;
-  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.errorTitle {
+  color: #e55;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.errorDetail {
+  color: #c88;
+  font-size: 13px;
+  line-height: 1.5;
 }

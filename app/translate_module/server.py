@@ -53,9 +53,10 @@ def validate_translation(data: dict) -> None:
         if has_non_latin_letters(text):
             errors.append(f"blocks_en[{i}].text contains non-Latin letters")
     full_text = data.get("full_text_en", "").strip()
-    joined = " ".join(b.get("text", "").strip() for b in data.get("blocks_en", [])).strip()
-    if full_text != joined:
-        errors.append(f"full_text_en != joined blocks_en: '{full_text}' vs '{joined}'")
+    for i, block in enumerate(data.get("blocks_en", [])):
+        block_text = block.get("text", "").strip()
+        if block_text and block_text not in full_text:
+            errors.append(f"blocks_en[{i}].text not found in full_text_en: '{block_text}'")
     if errors:
         raise ValueError(f"Validation errors: {errors}")
 

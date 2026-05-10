@@ -13,10 +13,39 @@ import json
 import sys
 import uuid
 
+from fastapi import Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from pydantic import BaseModel
+
 from .client import ocr, remove_text, caption, translate
 from .s3 import upload_image
 from .database import create_tables, AsyncSessionLocal
-from .models import MemeRequest
+from .models import MemeRequest, User
+from .auth import hash_password, verify_password, create_token, decode_token
+
+
+class AuthBody(BaseModel):
+    email: str
+    password: str
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
+
+
+async def optional_user(token: str | None = Depends(oauth2_scheme)):
+    if not token:
+        return None
+    payload = decode_token(token)
+    sub = payload.get("sub")
+    if not sub:
+        return None
+    return {"id": sub, "email": payload.get("email", "")}
+
+
+async def required_user(user=Depends(optional_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
 
 MAX_RETRIES = 3
 
@@ -172,6 +201,11 @@ def _meme_to_dict(r: MemeRequest) -> dict:
         "clean_image_url": r.clean_image_url,
         "result_image_url": r.result_image_url,
         "error": r.error,
+        "user_id": str(r.user_id) if r.user_id else None,
+        "ocr_retries": r.ocr_retries,
+        "caption_retries": r.caption_retries,
+        "humor_analysis_retries": r.humor_analysis_retries,
+        "translation_retries": r.translation_retries,
     }
 
 
@@ -261,11 +295,12 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
 
 
 @app.post("/process")
-async def process(file: UploadFile, background_tasks: BackgroundTasks):
+async def process(file: UploadFile, background_tasks: BackgroundTasks, user=Depends(required_user)):
     raw = await file.read()
     card_id = uuid.uuid4()
     record = MemeRequest(
         card_id=card_id,
+        user_id=uuid.UUID(user["id"]),
         started_at=datetime.now(timezone.utc),
         status="processing",
         current_step="ocr",
@@ -282,7 +317,7 @@ async def list_memes():
             text("""
                 SELECT DISTINCT ON (card_id) *
                 FROM meme_requests
-                WHERE deleted = false
+                WHERE deleted = false AND status != 'error'
                 ORDER BY card_id, started_at DESC
             """)
         )
@@ -379,7 +414,7 @@ async def get_meme(card_id: uuid.UUID):
 
 
 @app.delete("/memes/{card_id}", status_code=204)
-async def delete_meme(card_id: uuid.UUID):
+async def delete_meme(card_id: uuid.UUID, user=Depends(required_user)):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(MemeRequest)
@@ -388,13 +423,16 @@ async def delete_meme(card_id: uuid.UUID):
             .limit(1)
         )
         record = result.scalar_one_or_none()
-        if record:
-            record.deleted = True
-            await session.commit()
+        if not record:
+            return
+        if record.user_id is None or str(record.user_id) != user["id"]:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        record.deleted = True
+        await session.commit()
 
 
 @app.post("/memes/{card_id}/regenerate")
-async def regenerate_meme(card_id: uuid.UUID, background_tasks: BackgroundTasks):
+async def regenerate_meme(card_id: uuid.UUID, background_tasks: BackgroundTasks, user=Depends(required_user)):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(MemeRequest)
@@ -405,6 +443,8 @@ async def regenerate_meme(card_id: uuid.UUID, background_tasks: BackgroundTasks)
         old = result.scalar_one_or_none()
         if not old:
             return JSONResponse(status_code=404, content={"error": "not found"})
+        if old.user_id is None or str(old.user_id) != user["id"]:
+            raise HTTPException(status_code=403, detail="Forbidden")
         original_url = old.original_image_url
         old.deleted = True
         await session.commit()
@@ -416,6 +456,7 @@ async def regenerate_meme(card_id: uuid.UUID, background_tasks: BackgroundTasks)
 
     new_record = MemeRequest(
         card_id=card_id,
+        user_id=uuid.UUID(user["id"]),
         started_at=datetime.now(timezone.utc),
         status="processing",
         current_step="ocr",
@@ -454,3 +495,52 @@ async def meme_events(card_id: uuid.UUID):
             await asyncio.sleep(1)
 
     return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@app.post("/auth/register")
+async def register(body: AuthBody):
+    async with AsyncSessionLocal() as session:
+        existing = await session.execute(
+            select(User).where(User.email == body.email.lower())
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="Email already registered")
+        user = User(
+            email=body.email.lower(),
+            password_hash=hash_password(body.password),
+            created_at=datetime.now(timezone.utc),
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+    token = create_token(str(user.id), user.email)
+    return {"token": token, "user": {"id": str(user.id), "email": user.email}}
+
+
+@app.post("/auth/login")
+async def login(body: AuthBody):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(User).where(User.email == body.email.lower())
+        )
+        user = result.scalar_one_or_none()
+    if not user or not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    token = create_token(str(user.id), user.email)
+    return {"token": token, "user": {"id": str(user.id), "email": user.email}}
+
+
+@app.get("/memes/my")
+async def my_memes(user=Depends(required_user)):
+    async with AsyncSessionLocal() as session:
+        rows = await session.execute(
+            text("""
+                SELECT DISTINCT ON (card_id) *
+                FROM meme_requests
+                WHERE deleted = false AND user_id = :uid
+                ORDER BY card_id, started_at DESC
+            """),
+            {"uid": user["id"]},
+        )
+        records = rows.mappings().all()
+    return [dict(r) for r in records]

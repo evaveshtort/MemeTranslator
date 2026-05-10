@@ -70,6 +70,7 @@ services:
       - S3_SECRET_KEY=${S3_SECRET_KEY}
       - S3_BUCKET=${S3_BUCKET}
       - DATABASE_URL=postgresql+asyncpg://meme:${POSTGRES_PASSWORD}@postgres:5432/memedb
+      - JWT_SECRET=${JWT_SECRET}
     volumes:
       - ./api:/app/api
 

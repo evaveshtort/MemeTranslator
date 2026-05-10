@@ -30,3 +30,49 @@
 .searchInput::placeholder {
   color: #555;
 }
+
+.errorBanner {
+  background: #1a0f0f;
+  border-bottom: 1px solid #3a1a1a;
+  padding: 12px 20px;
+}
+
+.errorBannerTitle {
+  color: #e55;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.errorItem {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #2a1515;
+}
+
+.errorItem:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.errorText {
+  color: #c88;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.errorDismiss {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.errorDismiss:hover { color: #fff; }

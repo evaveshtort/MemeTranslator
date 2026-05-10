@@ -1,8 +1,31 @@
 import React, { useContext, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { LangContext } from '../App'
+import { LangContext, AuthContext } from '../App'
 import { fetchMeme, deleteMeme, regenerateMeme, openEventSource } from '../api'
 import styles from './MemePage.module.css'
+
+const ERROR_STEP_LABELS = {
+  ocr: 'OCR',
+  remove_text: 'удаление текста',
+  caption: 'описание изображения',
+  translate: 'перевод',
+  s3: 'загрузка файлов',
+}
+
+function formatMemeError(meme) {
+  const raw = meme.error || ''
+  const colonIdx = raw.indexOf(': ')
+  const step = colonIdx !== -1 ? raw.slice(0, colonIdx) : ''
+  const msg = colonIdx !== -1 ? raw.slice(colonIdx + 2) : raw
+  const stepLabel = ERROR_STEP_LABELS[step] || step || 'неизвестный этап'
+  const retries =
+    step === 'ocr' ? (meme.ocr_retries || 0) :
+    step === 'caption' ? (meme.caption_retries || 0) :
+    step === 'translate' ? (meme.translation_retries || 0) + (meme.humor_analysis_retries || 0) :
+    0
+  const retriesStr = retries > 0 ? ` (попыток: ${retries})` : ''
+  return `Этап «${stepLabel}»${retriesStr}: ${msg}`
+}
 
 const STEP_LABELS = {
   ocr: 'Распознавание текста',
@@ -20,6 +43,7 @@ export default function MemePage() {
   const { cardId } = useParams()
   const navigate = useNavigate()
   const { lang } = useContext(LangContext)
+  const { user } = useContext(AuthContext)
   const [meme, setMeme] = useState(null)
   const [currentStep, setCurrentStep] = useState(null)
   const [processing, setProcessing] = useState(false)
@@ -88,7 +112,10 @@ export default function MemePage() {
             </div>
           </div>
         ) : meme.status === 'error' ? (
-          <div className={styles.errorBox}>Ошибка: {meme.error}</div>
+          <div className={styles.errorBox}>
+            <div className={styles.errorTitle}>Не удалось обработать мем</div>
+            <div className={styles.errorDetail}>{formatMemeError(meme)}</div>
+          </div>
         ) : (
           <>
             {imgUrl && <img src={imgUrl} alt="" className={styles.img} />}
@@ -97,14 +124,16 @@ export default function MemePage() {
           </>
         )}
 
-        <div className={styles.actions}>
-          <button className={styles.btnRegen} onClick={handleRegenerate} disabled={processing}>
-            Перегенерировать
-          </button>
-          <button className={styles.btnDelete} onClick={handleDelete} disabled={processing}>
-            Удалить
-          </button>
-        </div>
+        {user && meme.user_id === user.id && (
+          <div className={styles.actions}>
+            <button className={styles.btnRegen} onClick={handleRegenerate} disabled={processing}>
+              Перегенерировать
+            </button>
+            <button className={styles.btnDelete} onClick={handleDelete} disabled={processing}>
+              Удалить
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
