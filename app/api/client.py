@@ -8,13 +8,24 @@ VISION_URL = "http://vision_service:8002"
 TRANSLATE_URL = "http://translate_service:8003"
 
 
+def _raise_from_response(r: httpx.Response) -> None:
+    if r.is_success:
+        return
+    try:
+        body = r.json()
+        msg = body.get("error") or body.get("detail") or r.text
+    except Exception:
+        msg = r.text or f"HTTP {r.status_code}"
+    raise ValueError(msg)
+
+
 async def ocr(img: Image.Image) -> dict:
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     buf.seek(0)
     async with httpx.AsyncClient(timeout=300) as client:
         r = await client.post(f"{OCR_URL}/ocr", files={"file": ("img.png", buf, "image/png")})
-        r.raise_for_status()
+        _raise_from_response(r)
         return r.json()
 
 
@@ -28,7 +39,7 @@ async def remove_text(img: Image.Image, blocks: list) -> Image.Image:
             files={"file": ("img.png", buf, "image/png")},
             params={"blocks": json.dumps(blocks)},
         )
-        r.raise_for_status()
+        _raise_from_response(r)
         return Image.open(io.BytesIO(r.content))
 
 
@@ -38,7 +49,7 @@ async def caption(img: Image.Image) -> str:
     buf.seek(0)
     async with httpx.AsyncClient(timeout=600) as client:
         r = await client.post(f"{VISION_URL}/caption", files={"file": ("img.jpg", buf, "image/jpeg")})
-        r.raise_for_status()
+        _raise_from_response(r)
         return r.json()["caption"]
 
 
@@ -68,5 +79,5 @@ async def translate(
                 "caption": caption_text,
             },
         )
-        r.raise_for_status()
+        _raise_from_response(r)
         return r.json()

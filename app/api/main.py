@@ -77,14 +77,25 @@ app.add_middleware(
 
 
 
+def _has_non_cyrillic_letters(text: str) -> bool:
+    import unicodedata
+    return any(
+        unicodedata.category(ch).startswith("L") and not ("Ѐ" <= ch <= "ӿ")
+        for ch in text
+    )
+
+
 def _validate_ocr(result: dict) -> None:
-    if not result.get("full_text", "").strip():
-        raise ValueError("OCR full_text is empty")
+    text = result.get("full_text", "").strip()
+    if not text:
+        raise ValueError("на картинке не обнаружен текст")
+    if _has_non_cyrillic_letters(text):
+        raise ValueError("текст на картинке не на русском языке")
 
 
 def _validate_caption(text_val: str) -> None:
     if len(text_val.strip()) <= 10:
-        raise ValueError(f"Caption too short ({len(text_val.strip())} chars)")
+        raise ValueError("не удалось получить описание изображения")
 
 
 async def call_with_retry(fn, *args, validate=None, **kwargs):

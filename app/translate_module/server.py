@@ -93,7 +93,7 @@ async def api_translate(
     if analysis_text is None:
         return JSONResponse(
             status_code=500,
-            content={"error": f"humor_analysis failed after {MAX_RETRIES} retries: {last_err}"},
+            content={"error": f"не удалось проанализировать юмор ({last_err})"},
         )
 
 
@@ -116,7 +116,7 @@ async def api_translate(
     if translation_data is None:
         return JSONResponse(
             status_code=500,
-            content={"error": f"translation failed after {MAX_RETRIES} retries: {last_err}"},
+            content={"error": f"не удалось перевести текст мема ({last_err})"},
         )
 
     try:
@@ -124,7 +124,7 @@ async def api_translate(
             original_img, clean_img, translation_data.get("blocks_en", [])
         )
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": f"text_adding failed: {e}"})
+        return JSONResponse(status_code=500, content={"error": f"не удалось наложить перевод на изображение ({e})"})
 
     buf = io.BytesIO()
     result_img.save(buf, format="PNG")
