@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import MasonryGrid from '../components/MasonryGrid'
 import MemeCard from '../components/MemeCard'
+import SkeletonCard from '../components/SkeletonCard'
 import { fetchMyMemes, deleteMeme } from '../api'
 import styles from './MainPage.module.css'
 
@@ -32,9 +33,10 @@ function formatError(meme) {
 
 export default function MyMemesPage() {
   const [memes, setMemes] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchMyMemes().then(setMemes).catch(console.error)
+    fetchMyMemes().then(data => { setMemes(data); setLoading(false) }).catch(() => setLoading(false))
     const interval = setInterval(() => {
       fetchMyMemes().then(setMemes).catch(console.error)
     }, 5000)
@@ -62,7 +64,11 @@ export default function MyMemesPage() {
           ))}
         </div>
       )}
-      {active.length === 0 ? (
+      {loading ? (
+        <MasonryGrid compact>
+          {[0, 1, 2].map(i => <SkeletonCard key={i} index={i} />)}
+        </MasonryGrid>
+      ) : active.length === 0 ? (
         <div style={{ color: '#555', textAlign: 'center', paddingTop: 100 }}>
           Вы ещё не загружали мемы
         </div>

@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+import React, { useContext, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { LangContext, AuthContext } from '../App'
 import styles from './Header.module.css'
@@ -7,6 +7,7 @@ export default function Header() {
   const { lang, toggleLang } = useContext(LangContext)
   const { user, logout } = useContext(AuthContext)
   const navigate = useNavigate()
+  const [showHelp, setShowHelp] = useState(false)
 
   function handleLogout() {
     logout()
@@ -14,6 +15,22 @@ export default function Header() {
   }
 
   return (
+    <>
+    {showHelp && (
+      <div className={styles.modalOverlay} onClick={() => setShowHelp(false)}>
+        <div className={styles.modalBox} onClick={e => e.stopPropagation()}>
+          <button className={styles.modalClose} onClick={() => setShowHelp(false)}>✕</button>
+          <div className={styles.modalTitle}>Как пользоваться сервисом</div>
+          <div className={styles.modalBody}>
+            <p>Сервис переводит русскоязычные мемы на английский и объясняет их юмор — чтобы поделиться с иностранцами или просто понять контекст.</p>
+            <p><strong>Что загружать:</strong> мемы на русском языке с текстом прямо на картинке. Чисто текстовые изображения, скриншоты переписки и мемы без текста не подходят.</p>
+            <p><strong>RU / EN</strong> — переключатель языка просмотра. В режиме <strong>RU</strong> показывается оригинал с распознанным текстом. В режиме <strong>EN</strong> — картинка с переведённым текстом и объяснение юмора на английском.</p>
+            <p><strong>Поиск</strong> работает по тексту мема, переводу и описанию — можно искать на русском или английском.</p>
+            <p><strong>Загрузить</strong> мем можно после регистрации — вкладка «Загрузить» в верхнем меню.</p>
+          </div>
+        </div>
+      </div>
+    )}
     <header className={styles.header}>
       <nav className={styles.tabs}>
         <NavLink to="/" end className={({ isActive }) => isActive ? styles.active : ''}>
@@ -36,6 +53,12 @@ export default function Header() {
           <span className={styles.sep}>|</span>
           <span className={lang === 'en' ? styles.selected : ''}>EN</span>
         </button>
+        <div className={styles.helpWrap}>
+          <button className={styles.helpBtn} onClick={() => setShowHelp(true)}>?</button>
+          <div className={styles.tooltip}>
+            RU — оригинал, EN — перевод с объяснением
+          </div>
+        </div>
         {user ? (
           <div className={styles.userMenu}>
             <span className={styles.email}>{user.email}</span>
@@ -49,5 +72,6 @@ export default function Header() {
         )}
       </div>
     </header>
+    </>
   )
 }

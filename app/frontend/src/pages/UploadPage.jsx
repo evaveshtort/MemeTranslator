@@ -51,6 +51,10 @@ export default function UploadPage() {
         }
       </div>
       {error && <p className={styles.error}>{error}</p>}
+      <div className={styles.hint}>
+        <p>Загружайте мемы на русском языке с текстом прямо на картинке.</p>
+        <p>Чисто текстовые изображения и мемы без текста не поддерживаются.</p>
+      </div>
     </div>
   )
 }

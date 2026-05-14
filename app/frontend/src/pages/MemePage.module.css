@@ -1,23 +1,91 @@
 .page {
   min-height: 100vh;
-  padding-top: 72px;
+  padding-top: 52px;
   display: flex;
   justify-content: center;
+}
+
+.layout {
+  display: flex;
+  width: 100%;
+  height: calc(100vh - 52px);
+  padding: 20px 24px;
+  gap: 28px;
+  max-width: 1400px;
+}
+
+.imagePane {
+  flex: 1;
+  min-width: 0;
+  max-width: calc(100vw * 2 / 3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
+}
+
+.sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.processingPane {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+    height: auto;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .imagePane {
+    max-width: 100%;
+    max-height: calc(100vh - 52px);
+  }
+
+  .img {
+    width: 100%;
+  }
+
+  .sidebar {
+    width: 100%;
+    overflow-y: visible;
+  }
+
+  .processingPane {
+    width: 100%;
+  }
+
+  .processingLayout .processingPane { order: 1; }
+  .processingLayout .imagePane       { order: 2; }
 }
 
 .content {
   width: 100%;
   max-width: 680px;
-  padding: 0 16px 40px;
+  padding: 20px 16px 40px;
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.img {
-  width: 100%;
-  border-radius: 8px;
-  display: block;
 }
 
 .text {
@@ -44,7 +112,7 @@
   background: #222;
   color: #ccc;
   border: 1px solid #333;
-  border-radius: 8px;
+  border-radius: 999px;
   padding: 10px 20px;
   font-size: 14px;
   cursor: pointer;
@@ -56,13 +124,26 @@
   background: transparent;
   color: #e55;
   border: 1px solid #442222;
-  border-radius: 8px;
+  border-radius: 999px;
   padding: 10px 20px;
   font-size: 14px;
   cursor: pointer;
   transition: background 0.15s;
 }
 .btnDelete:hover { background: #1a0a0a; }
+
+.btnCancel {
+  background: transparent;
+  color: #888;
+  border: 1px solid #333;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  align-self: flex-start;
+}
+.btnCancel:hover { background: #1a1a1a; color: #ccc; }
 
 button:disabled { opacity: 0.4; cursor: default; }
 
@@ -151,8 +232,17 @@ button:disabled { opacity: 0.4; cursor: default; }
   border-radius: 8px;
   padding: 16px;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.errorThumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .errorTitle {

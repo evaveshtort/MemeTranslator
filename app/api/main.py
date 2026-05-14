@@ -125,7 +125,7 @@ async def _worker_loop():
         _last_processed_user = str(record.user_id)
         await _update(record.id, status="processing", current_step="ocr")
         try:
-            await run_pipeline(record.id, raw)
+            await run_pipeline(record.id, raw, preset_original_url=record.original_image_url)
         except Exception as e:
             await _update(record.id, status="error", current_step="error",
                           error=f"pipeline: {e}")
@@ -169,7 +169,7 @@ def _has_non_cyrillic_letters(text: str) -> bool:
 
 def _validate_ocr(result: dict) -> None:
     text = result.get("full_text", "").strip()
-    if not text:
+    if not text or text == "":
         raise ValueError("на картинке не обнаружен текст")
     if _has_non_cyrillic_letters(text):
         raise ValueError("текст на картинке не на русском языке")
@@ -302,7 +302,7 @@ def _meme_to_dict(r: MemeRequest) -> dict:
     }
 
 
-async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
+async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: str | None = None) -> None:
     img = Image.open(io.BytesIO(raw))
 
     await _update(record_id, current_step="ocr")
@@ -367,7 +367,7 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
 
     # S3
     try:
-        original_url = upload_image(Image.open(io.BytesIO(raw)), folder="memes/original")
+        original_url = preset_original_url or upload_image(Image.open(io.BytesIO(raw)), folder="memes/original")
         clean_url = upload_image(clean_img, folder="memes/clean")
         result_img = Image.open(io.BytesIO(base64.b64decode(translate_result["result_image_base64"])))
         result_url = upload_image(result_img, folder="memes/result")
@@ -390,6 +390,9 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
 @app.post("/process")
 async def process(file: UploadFile, user=Depends(required_user)):
     raw = await file.read()
+    original_url = await asyncio.get_event_loop().run_in_executor(
+        None, lambda: upload_image(Image.open(io.BytesIO(raw)), folder="memes/original")
+    )
     card_id = uuid.uuid4()
     record = MemeRequest(
         card_id=card_id,
@@ -397,6 +400,7 @@ async def process(file: UploadFile, user=Depends(required_user)):
         started_at=datetime.now(timezone.utc),
         status="queued",
         current_step="queued",
+        original_image_url=original_url,
     )
     await _save(record)
     _pending_images[record.id] = raw
@@ -537,6 +541,7 @@ async def delete_meme(card_id: uuid.UUID, user=Depends(required_user)):
             return
         if record.user_id is None or str(record.user_id) != user["id"]:
             raise HTTPException(status_code=403, detail="Forbidden")
+        _pending_images.pop(record.id, None)
         record.deleted = True
         await session.commit()
 
@@ -570,6 +575,7 @@ async def regenerate_meme(card_id: uuid.UUID, user=Depends(required_user)):
         started_at=datetime.now(timezone.utc),
         status="queued",
         current_step="queued",
+        original_image_url=original_url,
     )
     await _save(new_record)
     _pending_images[new_record.id] = raw

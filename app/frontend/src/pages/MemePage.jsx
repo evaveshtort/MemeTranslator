@@ -82,6 +82,11 @@ export default function MemePage() {
     navigate('/')
   }
 
+  async function handleCancel() {
+    await deleteMeme(cardId)
+    navigate('/')
+  }
+
   async function handleRegenerate() {
     await regenerateMeme(cardId)
     setMeme(prev => ({ ...prev, status: 'queued' }))
@@ -95,61 +100,103 @@ export default function MemePage() {
   const imgUrl = lang === 'ru' ? meme.original_image_url : meme.result_image_url
   const text = lang === 'ru' ? meme.ocr_full_text : meme.full_text_en
   const explanation = lang === 'ru' ? meme.explanation_ru : meme.explanation_en
+  const isOwner = user && meme.user_id === user.id
+
+  if (processing) {
+    return (
+      <div className={styles.page}>
+        <div className={`${styles.layout} ${styles.processingLayout}`}>
+          {meme.original_image_url && (
+            <div className={styles.imagePane}>
+              <img src={meme.original_image_url} alt="" className={styles.img} />
+            </div>
+          )}
+          <div className={styles.processingPane}>
+            {currentStep === 'queued' ? (
+              <div className={styles.progressBox}>
+                <div className={styles.queueInfo}>
+                  <div className={styles.queueTitle}>В очереди на обработку</div>
+                  <div className={styles.queueCount}>
+                    {queuePosition === null ? '…' :
+                     queuePosition === 0 ? 'Следующий в очереди' :
+                     `Заявок впереди: ${queuePosition}`}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.progressBox}>
+                <div className={styles.steps}>
+                  {STEPS_ORDER.map(step => (
+                    <div key={step} className={`${styles.step} ${
+                      step === currentStep ? styles.active :
+                      STEPS_ORDER.indexOf(step) < STEPS_ORDER.indexOf(currentStep) ? styles.done : ''
+                    }`}>
+                      <div className={styles.dot} />
+                      <span>{STEP_LABELS[step]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {currentStep === 'queued' && isOwner && (
+              <button className={styles.btnCancel} onClick={handleCancel}>
+                Отменить
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (meme.status === 'error') {
+    return (
+      <div className={styles.page}>
+        <div className={styles.content}>
+          <div className={styles.errorBox}>
+            {meme.original_image_url && (
+              <img src={meme.original_image_url} alt="" className={styles.errorThumb} />
+            )}
+            <div>
+              <div className={styles.errorTitle}>Не удалось обработать мем</div>
+              <div className={styles.errorDetail}>{formatMemeError(meme)}</div>
+            </div>
+          </div>
+          {isOwner && (
+            <div className={styles.actions}>
+              <button className={styles.btnRegen} onClick={handleRegenerate}>
+                Перегенерировать
+              </button>
+              <button className={styles.btnDelete} onClick={handleDelete}>
+                Удалить
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.page}>
-      <div className={styles.content}>
-
-        {processing ? (
-          currentStep === 'queued' ? (
-            <div className={styles.progressBox}>
-              <div className={styles.queueInfo}>
-                <div className={styles.queueTitle}>В очереди на обработку</div>
-                <div className={styles.queueCount}>
-                  {queuePosition === null ? '…' :
-                   queuePosition === 0 ? 'Следующий в очереди' :
-                   `Заявок впереди: ${queuePosition}`}
-                </div>
-              </div>
+      <div className={styles.layout}>
+        <div className={styles.imagePane}>
+          {imgUrl && <img src={imgUrl} alt="" className={styles.img} />}
+        </div>
+        <div className={styles.sidebar}>
+          {text && <p className={styles.text}>{text}</p>}
+          {explanation && <p className={styles.explanation}>{explanation}</p>}
+          {isOwner && (
+            <div className={styles.actions}>
+              <button className={styles.btnRegen} onClick={handleRegenerate}>
+                Перегенерировать
+              </button>
+              <button className={styles.btnDelete} onClick={handleDelete}>
+                Удалить
+              </button>
             </div>
-          ) : (
-          <div className={styles.progressBox}>
-            <div className={styles.steps}>
-              {STEPS_ORDER.map(step => (
-                <div key={step} className={`${styles.step} ${
-                  step === currentStep ? styles.active :
-                  STEPS_ORDER.indexOf(step) < STEPS_ORDER.indexOf(currentStep) ? styles.done : ''
-                }`}>
-                  <div className={styles.dot} />
-                  <span>{STEP_LABELS[step]}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          )
-        ) : meme.status === 'error' ? (
-          <div className={styles.errorBox}>
-            <div className={styles.errorTitle}>Не удалось обработать мем</div>
-            <div className={styles.errorDetail}>{formatMemeError(meme)}</div>
-          </div>
-        ) : (
-          <>
-            {imgUrl && <img src={imgUrl} alt="" className={styles.img} />}
-            {text && <p className={styles.text}>{text}</p>}
-            {explanation && <p className={styles.explanation}>{explanation}</p>}
-          </>
-        )}
-
-        {user && meme.user_id === user.id && (
-          <div className={styles.actions}>
-            <button className={styles.btnRegen} onClick={handleRegenerate} disabled={processing}>
-              Перегенерировать
-            </button>
-            <button className={styles.btnDelete} onClick={handleDelete} disabled={processing}>
-              Удалить
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
