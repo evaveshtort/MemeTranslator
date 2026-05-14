@@ -345,6 +345,11 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: st
 
     try:
         description, caption_retries = await call_with_retry(caption, clean_img, validate=_validate_caption)
+    except RetryError as e:
+        await _update(record_id,
+                      visual_context=e.last_result,
+                      status="error", current_step="error", error=f"caption: {e.__cause__ or e}")
+        return
     except Exception as e:
         await _update(record_id, status="error", current_step="error", error=f"caption: {e}")
         return
@@ -358,6 +363,19 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: st
 
     try:
         translate_result, _ = await call_with_retry(translate, img, clean_img, ocr_result, description)
+    except RetryError as e:
+        last = e.last_result or {}
+        await _update(record_id,
+                      humor_analysis=last.get("analysis"),
+                      literal_translation=last.get("literal_translation"),
+                      humor_analysis_retries=last.get("humor_retries", 0),
+                      translation_retries=last.get("translation_retries", 0),
+                      explanation_ru=last.get("explanation_ru"),
+                      explanation_en=last.get("explanation_en"),
+                      full_text_en=last.get("full_text_en"),
+                      blocks_en=last.get("blocks_en"),
+                      status="error", current_step="error", error=f"translate: {e.__cause__ or e}")
+        return
     except Exception as e:
         await _update(record_id, status="error", current_step="error", error=f"translate: {e}")
         return
