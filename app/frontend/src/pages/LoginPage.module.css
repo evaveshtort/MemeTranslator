@@ -38,7 +38,7 @@
   width: 100%;
   background: #111;
   border: 1px solid #333;
-  border-radius: 8px;
+  border-radius: 999px;
   padding: 10px 12px;
   color: #fff;
   font-size: 15px;
@@ -61,7 +61,7 @@
   background: #fff;
   color: #000;
   border: none;
-  border-radius: 8px;
+  border-radius: 999px;
   padding: 11px;
   font-size: 15px;
   font-weight: 600;

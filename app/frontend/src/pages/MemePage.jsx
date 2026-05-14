@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { LangContext, AuthContext } from '../App'
 import { fetchMeme, deleteMeme, regenerateMeme, openEventSource } from '../api'
@@ -48,6 +48,34 @@ export default function MemePage() {
   const [currentStep, setCurrentStep] = useState(null)
   const [queuePosition, setQueuePosition] = useState(null)
   const [processing, setProcessing] = useState(false)
+
+  const imgRef = useRef(null)
+  const rightPaneRef = useRef(null)
+
+  const adjustLayout = useCallback(() => {
+    if (!imgRef.current || !rightPaneRef.current) return
+    if (window.innerWidth <= 768) {
+      rightPaneRef.current.style.marginLeft = ''
+      return
+    }
+    const imgRight = imgRef.current.getBoundingClientRect().right
+    const center = window.innerWidth / 2
+    if (imgRight < center) {
+      const mirroredLeft = 2 * center - imgRight
+      const paneLeft = rightPaneRef.current.getBoundingClientRect().left
+      const extra = mirroredLeft - paneLeft
+      rightPaneRef.current.style.marginLeft = extra > 0 ? Math.round(extra) + 'px' : ''
+    } else {
+      rightPaneRef.current.style.marginLeft = ''
+    }
+  }, [])
+
+  useLayoutEffect(() => { adjustLayout() })
+
+  useEffect(() => {
+    window.addEventListener('resize', adjustLayout)
+    return () => window.removeEventListener('resize', adjustLayout)
+  }, [adjustLayout])
 
   useEffect(() => {
     fetchMeme(cardId).then(data => {
@@ -100,6 +128,11 @@ export default function MemePage() {
   const imgUrl = lang === 'ru' ? meme.original_image_url : meme.result_image_url
   const text = lang === 'ru' ? meme.ocr_full_text : meme.full_text_en
   const explanation = lang === 'ru' ? meme.explanation_ru : meme.explanation_en
+
+  function cleanText(t) {
+    if (!t) return t
+    return t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+  }
   const isOwner = user && meme.user_id === user.id
 
   if (processing) {
@@ -108,10 +141,10 @@ export default function MemePage() {
         <div className={`${styles.layout} ${styles.processingLayout}`}>
           {meme.original_image_url && (
             <div className={styles.imagePane}>
-              <img src={meme.original_image_url} alt="" className={styles.img} />
+              <img src={meme.original_image_url} alt="" className={styles.img} ref={imgRef} onLoad={adjustLayout} />
             </div>
           )}
-          <div className={styles.processingPane}>
+          <div className={styles.processingPane} ref={rightPaneRef}>
             {currentStep === 'queued' ? (
               <div className={styles.progressBox}>
                 <div className={styles.queueInfo}>
@@ -181,11 +214,11 @@ export default function MemePage() {
     <div className={styles.page}>
       <div className={styles.layout}>
         <div className={styles.imagePane}>
-          {imgUrl && <img src={imgUrl} alt="" className={styles.img} />}
+          {imgUrl && <img src={imgUrl} alt="" className={styles.img} ref={imgRef} onLoad={adjustLayout} />}
         </div>
-        <div className={styles.sidebar}>
-          {text && <p className={styles.text}>{text}</p>}
-          {explanation && <p className={styles.explanation}>{explanation}</p>}
+        <div className={styles.sidebar} ref={rightPaneRef}>
+          {text && <p className={styles.text}>{cleanText(text)}</p>}
+          {explanation && <p className={styles.explanation}>{cleanText(explanation)}</p>}
           {isOwner && (
             <div className={styles.actions}>
               <button className={styles.btnRegen} onClick={handleRegenerate}>
