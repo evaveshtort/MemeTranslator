@@ -58,6 +58,9 @@ export default function MyMemesPage() {
           <div className={styles.errorBannerTitle}>Ошибки обработки</div>
           {errors.map(e => (
             <div key={e.card_id} className={styles.errorItem}>
+              {e.original_image_url && (
+                <img src={e.original_image_url} alt="" className={styles.errorThumb} />
+              )}
               <span className={styles.errorText}>{formatError(e)}</span>
               <button className={styles.errorDismiss} onClick={() => dismissError(e.card_id)}>✕</button>
             </div>

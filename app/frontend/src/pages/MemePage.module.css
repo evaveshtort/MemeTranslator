@@ -10,7 +10,7 @@
   width: 100%;
   height: calc(100vh - 52px);
   padding: 20px 24px;
-  gap: 28px;
+  gap: 16px;
   max-width: 1400px;
 }
 
@@ -42,7 +42,7 @@
 }
 
 .processingPane {
-  width: 320px;
+  width: 400px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -59,11 +59,14 @@
 
   .imagePane {
     max-width: 100%;
-    max-height: calc(100vh - 52px);
+    max-height: 80vh;
   }
 
   .img {
-    width: 100%;
+    max-width: 100%;
+    max-height: 80vh;
+    width: auto;
+    height: auto;
   }
 
   .sidebar {

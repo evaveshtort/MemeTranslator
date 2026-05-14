@@ -166,20 +166,16 @@ app.add_middleware(
 
 
 
-def _has_non_cyrillic_letters(text: str) -> bool:
-    import unicodedata
-    return any(
-        unicodedata.category(ch).startswith("L") and not ("Ѐ" <= ch <= "ӿ")
-        for ch in text
-    )
-
-
 def _validate_ocr(result: dict) -> None:
+    import unicodedata
     text = result.get("full_text", "").strip()
-    if not text or text == "":
+    if not text:
         raise ValueError("на картинке не обнаружен текст")
-    if _has_non_cyrillic_letters(text):
-        raise ValueError("текст на картинке не на русском языке")
+    letters = [ch for ch in text if unicodedata.category(ch).startswith("L")]
+    if letters:
+        cyrillic_ratio = sum(1 for ch in letters if "Ѐ" <= ch <= "ӿ") / len(letters)
+        if cyrillic_ratio < 0.9:
+            raise ValueError("текст на картинке не на русском языке")
 
 
 def _validate_caption(text_val: str) -> None:
