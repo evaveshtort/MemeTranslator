@@ -51,23 +51,35 @@ export default function MemePage() {
 
   const imgRef = useRef(null)
   const rightPaneRef = useRef(null)
+  const imagePaneRef = useRef(null)
 
   const adjustLayout = useCallback(() => {
-    if (!imgRef.current || !rightPaneRef.current) return
-    if (window.innerWidth <= 768) {
-      rightPaneRef.current.style.marginLeft = ''
-      return
-    }
-    const imgRight = imgRef.current.getBoundingClientRect().right
-    const center = window.innerWidth / 2
-    if (imgRight < center) {
-      const mirroredLeft = 2 * center - imgRight
-      const paneLeft = rightPaneRef.current.getBoundingClientRect().left
-      const extra = mirroredLeft - paneLeft
-      rightPaneRef.current.style.marginLeft = extra > 0 ? Math.round(extra) + 'px' : ''
-    } else {
-      rightPaneRef.current.style.marginLeft = ''
-    }
+    const img = imgRef.current
+    const rightPane = rightPaneRef.current
+    const imagePane = imagePaneRef.current
+
+    if (imagePane) imagePane.style.marginLeft = ''
+    if (rightPane) rightPane.style.marginLeft = ''
+
+    if (!img || !rightPane) return
+    if (window.innerWidth <= 768) return
+
+    const I = img.getBoundingClientRect().width
+    const vw = window.innerWidth
+    if (I <= 0 || I >= vw / 2) return
+
+    // Layout: [2X] image [X] center [X] text [natural]
+    // X = (vw/2 - I) / 3, left margin = 2X = (vw - 2I) / 3
+    const twoX = (vw - 2 * I) / 3
+    const naturalLeft = imagePane
+      ? imagePane.getBoundingClientRect().left
+      : img.getBoundingClientRect().left
+
+    if (imagePane) imagePane.style.marginLeft = Math.max(0, Math.round(twoX - naturalLeft)) + 'px'
+    // after imagePane shift, rightPane natural left = twoX + I + 16 (gap)
+    // desired text left = twoX + I + X = twoX + I + twoX/2 = I + 3X = center + X
+    // extra = twoX/2 - 16 = X - 16
+    rightPane.style.marginLeft = Math.max(0, Math.round(twoX / 2 - 16)) + 'px'
   }, [])
 
   useLayoutEffect(() => { adjustLayout() })
@@ -140,7 +152,7 @@ export default function MemePage() {
       <div className={styles.page}>
         <div className={`${styles.layout} ${styles.processingLayout}`}>
           {meme.original_image_url && (
-            <div className={styles.imagePane}>
+            <div className={styles.imagePane} ref={imagePaneRef}>
               <img src={meme.original_image_url} alt="" className={styles.img} ref={imgRef} onLoad={adjustLayout} />
             </div>
           )}
@@ -213,7 +225,7 @@ export default function MemePage() {
   return (
     <div className={styles.page}>
       <div className={styles.layout}>
-        <div className={styles.imagePane}>
+        <div className={styles.imagePane} ref={imagePaneRef}>
           {imgUrl && <img src={imgUrl} alt="" className={styles.img} ref={imgRef} onLoad={adjustLayout} />}
         </div>
         <div className={styles.sidebar} ref={rightPaneRef}>
