@@ -49,9 +49,16 @@ async def required_user(user=Depends(optional_user)):
 
 MAX_RETRIES = 3
 
+
+class RetryError(Exception):
+    def __init__(self, cause, last_result=None):
+        super().__init__(str(cause))
+        self.__cause__ = cause
+        self.last_result = last_result
+
 _pending_images: dict[uuid.UUID, bytes] = {}
 _last_processed_user: str | None = None
-_worker_event: asyncio.Event = None  # type: ignore[assignment]
+_worker_event: asyncio.Event = None 
 
 _embed_model = None
 
@@ -182,15 +189,17 @@ def _validate_caption(text_val: str) -> None:
 
 async def call_with_retry(fn, *args, validate=None, **kwargs):
     last_err = None
+    last_result = None
     for attempt in range(MAX_RETRIES):
         try:
             result = await fn(*args, **kwargs)
+            last_result = result
             if validate is not None:
                 validate(result)
             return result, attempt
         except Exception as e:
             last_err = e
-    raise last_err
+    raise RetryError(last_err, last_result)
 
 
 async def _update(record_id, **fields) -> None:
@@ -308,6 +317,11 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: st
     await _update(record_id, current_step="ocr")
     try:
         ocr_result, ocr_retries = await call_with_retry(ocr, img, validate=_validate_ocr)
+    except RetryError as e:
+        await _update(record_id,
+                      ocr_full_text=(e.last_result or {}).get("full_text"),
+                      status="error", current_step="error", error=f"ocr: {e.__cause__ or e}")
+        return
     except Exception as e:
         await _update(record_id, status="error", current_step="error", error=f"ocr: {e}")
         return
