@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from fastapi import FastAPI, UploadFile, BackgroundTasks
+from fastapi import FastAPI, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
@@ -49,6 +49,10 @@ async def required_user(user=Depends(optional_user)):
 
 MAX_RETRIES = 3
 
+_pending_images: dict[uuid.UUID, bytes] = {}
+_last_processed_user: str | None = None
+_worker_event: asyncio.Event = None  # type: ignore[assignment]
+
 _embed_model = None
 
 
@@ -60,10 +64,88 @@ def _embed_sync(query: str) -> list[float]:
     return next(_embed_model.embed([query])).tolist()
 
 
+async def _pick_next() -> tuple["MemeRequest | None", "bytes | None"]:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(MemeRequest)
+            .where(MemeRequest.status == "queued", MemeRequest.deleted == False)
+            .order_by(MemeRequest.started_at.asc())
+        )
+        queued = result.scalars().all()
+
+    if not queued:
+        return None, None
+
+    other = [r for r in queued if str(r.user_id) != _last_processed_user]
+    record = other[0] if other else queued[0]
+
+    raw = _pending_images.pop(record.id, None)
+    if raw is None:
+        await _update(record.id, status="error", current_step="error",
+                      error="ocr: данные изображения утеряны после перезапуска")
+        return await _pick_next()
+
+    return record, raw
+
+
+async def _compute_queue_position(record: "MemeRequest") -> int:
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(MemeRequest)
+            .where(MemeRequest.status == "queued", MemeRequest.deleted == False)
+            .order_by(MemeRequest.started_at.asc())
+        )
+        queued = result.scalars().all()
+
+    remaining = list(queued)
+    position = 0
+    last_user = _last_processed_user
+
+    while remaining:
+        other = [r for r in remaining if str(r.user_id) != last_user]
+        next_req = other[0] if other else remaining[0]
+        if next_req.id == record.id:
+            return position
+        position += 1
+        last_user = str(next_req.user_id)
+        remaining.remove(next_req)
+
+    return position
+
+
+async def _worker_loop():
+    global _last_processed_user
+    while True:
+        record, raw = await _pick_next()
+        if record is None:
+            await _worker_event.wait()
+            _worker_event.clear()
+            continue
+
+        _last_processed_user = str(record.user_id)
+        await _update(record.id, status="processing", current_step="ocr")
+        try:
+            await run_pipeline(record.id, raw)
+        except Exception as e:
+            await _update(record.id, status="error", current_step="error",
+                          error=f"pipeline: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app):
+    global _worker_event
     await create_tables()
+    async with AsyncSessionLocal() as session:
+        await session.execute(text(
+            "UPDATE meme_requests SET status='error', current_step='error', "
+            "error='ocr: сервер был перезапущен во время обработки' "
+            "WHERE status IN ('queued', 'processing')"
+        ))
+        await session.commit()
+    _worker_event = asyncio.Event()
+    worker = asyncio.create_task(_worker_loop())
     yield
+    worker.cancel()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -306,18 +388,19 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes) -> None:
 
 
 @app.post("/process")
-async def process(file: UploadFile, background_tasks: BackgroundTasks, user=Depends(required_user)):
+async def process(file: UploadFile, user=Depends(required_user)):
     raw = await file.read()
     card_id = uuid.uuid4()
     record = MemeRequest(
         card_id=card_id,
         user_id=uuid.UUID(user["id"]),
         started_at=datetime.now(timezone.utc),
-        status="processing",
-        current_step="ocr",
+        status="queued",
+        current_step="queued",
     )
     await _save(record)
-    background_tasks.add_task(run_pipeline, record.id, raw)
+    _pending_images[record.id] = raw
+    _worker_event.set()
     return {"card_id": str(card_id)}
 
 
@@ -459,7 +542,7 @@ async def delete_meme(card_id: uuid.UUID, user=Depends(required_user)):
 
 
 @app.post("/memes/{card_id}/regenerate")
-async def regenerate_meme(card_id: uuid.UUID, background_tasks: BackgroundTasks, user=Depends(required_user)):
+async def regenerate_meme(card_id: uuid.UUID, user=Depends(required_user)):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(MemeRequest)
@@ -485,11 +568,12 @@ async def regenerate_meme(card_id: uuid.UUID, background_tasks: BackgroundTasks,
         card_id=card_id,
         user_id=uuid.UUID(user["id"]),
         started_at=datetime.now(timezone.utc),
-        status="processing",
-        current_step="ocr",
+        status="queued",
+        current_step="queued",
     )
     await _save(new_record)
-    background_tasks.add_task(run_pipeline, new_record.id, raw)
+    _pending_images[new_record.id] = raw
+    _worker_event.set()
     return {"card_id": str(card_id)}
 
 
@@ -510,11 +594,10 @@ async def meme_events(card_id: uuid.UUID):
                 yield f"data: {json.dumps({'status': 'error', 'current_step': 'error'})}\n\n"
                 break
 
-            payload = json.dumps({
-                "status": record.status,
-                "current_step": record.current_step,
-            })
-            yield f"data: {payload}\n\n"
+            data: dict = {"status": record.status, "current_step": record.current_step}
+            if record.status == "queued":
+                data["queue_position"] = await _compute_queue_position(record)
+            yield f"data: {json.dumps(data)}\n\n"
 
             if record.status in ("success", "error"):
                 break

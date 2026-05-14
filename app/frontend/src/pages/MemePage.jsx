@@ -46,12 +46,13 @@ export default function MemePage() {
   const { user } = useContext(AuthContext)
   const [meme, setMeme] = useState(null)
   const [currentStep, setCurrentStep] = useState(null)
+  const [queuePosition, setQueuePosition] = useState(null)
   const [processing, setProcessing] = useState(false)
 
   useEffect(() => {
     fetchMeme(cardId).then(data => {
       setMeme(data)
-      if (data.status === 'processing') startSSE()
+      if (data.status === 'processing' || data.status === 'queued') startSSE()
     }).catch(() => navigate('/'))
   }, [cardId])
 
@@ -61,6 +62,7 @@ export default function MemePage() {
     es.onmessage = (e) => {
       const data = JSON.parse(e.data)
       setCurrentStep(data.current_step)
+      if (data.queue_position !== undefined) setQueuePosition(data.queue_position)
       if (data.status === 'success') {
         es.close()
         setProcessing(false)
@@ -82,8 +84,9 @@ export default function MemePage() {
 
   async function handleRegenerate() {
     await regenerateMeme(cardId)
-    setMeme(prev => ({ ...prev, status: 'processing' }))
-    setCurrentStep('ocr')
+    setMeme(prev => ({ ...prev, status: 'queued' }))
+    setCurrentStep('queued')
+    setQueuePosition(null)
     startSSE()
   }
 
@@ -98,6 +101,18 @@ export default function MemePage() {
       <div className={styles.content}>
 
         {processing ? (
+          currentStep === 'queued' ? (
+            <div className={styles.progressBox}>
+              <div className={styles.queueInfo}>
+                <div className={styles.queueTitle}>В очереди на обработку</div>
+                <div className={styles.queueCount}>
+                  {queuePosition === null ? '…' :
+                   queuePosition === 0 ? 'Следующий в очереди' :
+                   `Заявок впереди: ${queuePosition}`}
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className={styles.progressBox}>
             <div className={styles.steps}>
               {STEPS_ORDER.map(step => (
@@ -111,6 +126,7 @@ export default function MemePage() {
               ))}
             </div>
           </div>
+          )
         ) : meme.status === 'error' ? (
           <div className={styles.errorBox}>
             <div className={styles.errorTitle}>Не удалось обработать мем</div>

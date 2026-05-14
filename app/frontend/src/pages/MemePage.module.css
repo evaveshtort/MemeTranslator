@@ -126,6 +126,26 @@ button:disabled { opacity: 0.4; cursor: default; }
   50% { opacity: 0.4; }
 }
 
+.queueInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.queueTitle {
+  color: #aaa;
+  font-size: 15px;
+}
+
+.queueCount {
+  color: #fff;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
 .errorBox {
   background: #1a0808;
   border-radius: 8px;
