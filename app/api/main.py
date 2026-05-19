@@ -120,6 +120,33 @@ async def _compute_queue_position(record: "MemeRequest") -> int:
     return position
 
 
+async def _reconcile_regen(new_record_id: uuid.UUID) -> None:
+    async with AsyncSessionLocal() as session:
+        new_record = await session.get(MemeRequest, new_record_id)
+        if not new_record or new_record.deleted:
+            return
+        result = await session.execute(
+            select(MemeRequest)
+            .where(
+                MemeRequest.card_id == new_record.card_id,
+                MemeRequest.id != new_record.id,
+                MemeRequest.deleted == False,
+            )
+            .order_by(MemeRequest.started_at.desc())
+        )
+        others = result.scalars().all()
+
+        if new_record.status == "success":
+            for o in others:
+                o.deleted = True
+            await session.commit()
+        elif new_record.status == "error":
+            previous_success = next((o for o in others if o.status == "success"), None)
+            if previous_success:
+                new_record.deleted = True
+                await session.commit()
+
+
 async def _worker_loop():
     global _last_processed_user
     while True:
@@ -136,6 +163,7 @@ async def _worker_loop():
         except Exception as e:
             await _update(record.id, status="error", current_step="error",
                           error=f"pipeline: {e}")
+        await _reconcile_regen(record.id)
 
 
 @asynccontextmanager
@@ -586,8 +614,6 @@ async def regenerate_meme(card_id: uuid.UUID, user=Depends(required_user)):
         if old.user_id is None or str(old.user_id) != user["id"]:
             raise HTTPException(status_code=403, detail="Forbidden")
         original_url = old.original_image_url
-        old.deleted = True
-        await session.commit()
 
     async with httpx.AsyncClient(timeout=60) as client:
         resp = await client.get(original_url)
