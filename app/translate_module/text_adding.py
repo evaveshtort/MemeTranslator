@@ -181,16 +181,26 @@ def _analyze_block(original_np: np.ndarray, coords: tuple) -> dict:
             10, cv2.KMEANS_RANDOM_CENTERS,
         )
         counts3 = np.bincount(labels3.flatten())
-        order   = np.argsort(counts3)           # ascending: text, stroke, bg
-        t_color = bgr_to_rgb(centers3[order[0]])
-        m_color = bgr_to_rgb(centers3[order[1]])
-        m_ratio = float(counts3[order[1]] / len(labels3))
-        m_lum   = _luminance(m_color)
-        t_lum   = _luminance(t_color)
-        if abs(t_lum - m_lum) > 100 and (m_lum < 50 or m_lum > 200) and 0.04 < m_ratio < 0.45:
+        order   = np.argsort(counts3)          
+        stroke_cand = bgr_to_rgb(centers3[order[0]])
+        body_cand   = bgr_to_rgb(centers3[order[1]])
+        s_ratio     = float(counts3[order[0]] / len(labels3))
+
+        s_lum    = _luminance(stroke_cand)
+        body_lum = _luminance(body_cand)
+        text_lum = _luminance(text_color)
+
+        text_is_extreme = text_lum < 60 or text_lum > 195
+        if (
+            (s_lum < 40 or s_lum > 215)
+            and abs(body_lum - s_lum) > 150
+            and abs(text_lum - s_lum) > 150
+            and text_is_extreme
+            and 0.04 < s_ratio < 0.40
+        ):
             has_stroke   = True
-            stroke_color = m_color
-            stroke_ratio = m_ratio
+            stroke_color = stroke_cand
+            stroke_ratio = s_ratio
 
     return {
         "text_color":   text_color,
