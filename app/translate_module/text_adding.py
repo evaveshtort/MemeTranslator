@@ -211,15 +211,28 @@ def _weight_for(text_ratio: float) -> int:
     return int(max(200, min(1000, text_ratio * 3000)))
 
 
+_AXIS_NAME_TO_TAG = {
+    "Weight":       "wght",
+    "Width":        "wdth",
+    "Optical Size": "opsz",
+    "Slant":        "slnt",
+}
+
+
+def _axis_tag(axis: dict) -> str:
+    name = axis.get("name")
+    if isinstance(name, bytes):
+        name = name.decode("ascii", errors="ignore")
+    return _AXIS_NAME_TO_TAG.get(name or "", "")
+
+
 def _make_var_font(size: int, wght: int, wdth: int, slnt: float) -> ImageFont.FreeTypeFont:
     font = ImageFont.truetype(FONT_PATH, size)
     opsz = max(8, min(144, size))
     target = {"wght": wght, "wdth": wdth, "opsz": opsz, "slnt": slnt}
     values = []
     for axis in font.get_variation_axes():
-        tag = axis["tag"]
-        if isinstance(tag, bytes):
-            tag = tag.decode("ascii")
+        tag = _axis_tag(axis)
         values.append(target.get(tag, axis["default"]))
     font.set_variation_by_axes(values)
     return font

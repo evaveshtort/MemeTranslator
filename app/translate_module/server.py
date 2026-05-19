@@ -4,6 +4,7 @@ from PIL import Image
 import io
 import json
 import base64
+import traceback
 import unicodedata
 
 from .humor_analysis import analyse_humor
@@ -82,6 +83,7 @@ async def api_translate(
             raise ValueError("Analysis contains non-Latin letters (must be English only)")
         analysis_text = result
     except Exception as e:
+        traceback.print_exc()
         return JSONResponse(
             status_code=500,
             content={"error": f"не удалось проанализировать юмор ({e})"},
@@ -95,6 +97,7 @@ async def api_translate(
         translation_data = json.loads(raw)
         validate_translation(translation_data)
     except Exception as e:
+        traceback.print_exc()
         return JSONResponse(
             status_code=500,
             content={"error": f"не удалось перевести текст мема ({e})"},
@@ -105,6 +108,7 @@ async def api_translate(
             original_img, clean_img, translation_data.get("blocks_en", [])
         )
     except Exception as e:
+        traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": f"не удалось наложить перевод на изображение ({e})"})
 
     buf = io.BytesIO()
