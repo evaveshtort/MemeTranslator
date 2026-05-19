@@ -146,25 +146,12 @@ export default function MemePage() {
     startSSE()
   }
 
-  async function handleDownload() {
-    if (!imgUrl) return
-    const ext = (imgUrl.split('?')[0].split('.').pop() || 'jpg').toLowerCase()
-    const filename = `meme-${cardId}-${lang}.${ext}`
-    try {
-      const resp = await fetch(imgUrl)
-      if (!resp.ok) throw new Error()
-      const blob = await resp.blob()
-      const blobUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = blobUrl
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(blobUrl)
-    } catch {
-      window.open(imgUrl, '_blank')
-    }
+  function handleDownload() {
+    const a = document.createElement('a')
+    a.href = `/api/memes/${cardId}/download?lang=${lang}`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
   }
 
   if (!meme) return <div className={styles.loading}><div className={styles.spinner} /></div>

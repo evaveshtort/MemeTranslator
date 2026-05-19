@@ -608,6 +608,40 @@ async def regenerate_meme(card_id: uuid.UUID, user=Depends(required_user)):
     return {"card_id": str(card_id)}
 
 
+@app.get("/memes/{card_id}/download")
+async def download_meme(card_id: uuid.UUID, lang: str = "en"):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(MemeRequest)
+            .where(MemeRequest.card_id == card_id, MemeRequest.deleted == False)
+            .order_by(MemeRequest.started_at.desc())
+            .limit(1)
+        )
+        record = result.scalar_one_or_none()
+    if not record:
+        raise HTTPException(status_code=404, detail="not found")
+
+    url = record.original_image_url if lang == "ru" else record.result_image_url
+    if not url:
+        raise HTTPException(status_code=404, detail="image not available")
+
+    ext = (url.split("?")[0].rsplit(".", 1)[-1] or "jpg").lower()
+    filename = f"meme-{card_id}-{lang}.{ext}"
+
+    async def stream():
+        async with httpx.AsyncClient(timeout=60) as client:
+            async with client.stream("GET", url) as resp:
+                resp.raise_for_status()
+                async for chunk in resp.aiter_bytes():
+                    yield chunk
+
+    return StreamingResponse(
+        stream(),
+        media_type="application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 @app.get("/memes/{card_id}/events")
 async def meme_events(card_id: uuid.UUID, request: Request):
     async def stream():
