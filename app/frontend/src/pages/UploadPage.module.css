@@ -4,11 +4,12 @@
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  padding-top: 52px;
+  padding: 52px 16px 24px;
 }
 
 .dropzone {
-  width: 480px;
+  width: 100%;
+  max-width: 480px;
   height: 240px;
   border: 2px dashed #333;
   border-radius: 12px;
@@ -20,6 +21,8 @@
   cursor: pointer;
   color: #555;
   font-size: 15px;
+  text-align: center;
+  padding: 0 16px;
   transition: border-color 0.15s, color 0.15s;
 }
 
@@ -52,8 +55,8 @@
 
 .hint {
   margin-top: 20px;
+  width: 100%;
   max-width: 480px;
-  width: 480px;
   display: flex;
   flex-direction: column;
   gap: 4px;

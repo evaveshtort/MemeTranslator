@@ -146,6 +146,27 @@ export default function MemePage() {
     startSSE()
   }
 
+  async function handleDownload() {
+    if (!imgUrl) return
+    const ext = (imgUrl.split('?')[0].split('.').pop() || 'jpg').toLowerCase()
+    const filename = `meme-${cardId}-${lang}.${ext}`
+    try {
+      const resp = await fetch(imgUrl)
+      if (!resp.ok) throw new Error()
+      const blob = await resp.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      window.open(imgUrl, '_blank')
+    }
+  }
+
   if (!meme) return <div className={styles.loading}><div className={styles.spinner} /></div>
 
   const imgUrl = lang === 'ru' ? meme.original_image_url : meme.result_image_url
@@ -194,7 +215,7 @@ export default function MemePage() {
                 </div>
               </div>
             )}
-            {currentStep === 'queued' && isOwner && (
+            {isOwner && (
               <button className={styles.btnCancel} onClick={handleCancel}>
                 Отменить
               </button>
@@ -242,16 +263,21 @@ export default function MemePage() {
         <div className={styles.sidebar} ref={rightPaneRef}>
           {text && <p className={styles.text}>{cleanText(text)}</p>}
           {explanation && <p className={styles.explanation}>{cleanText(explanation)}</p>}
-          {isOwner && (
-            <div className={styles.actions}>
-              <button className={styles.btnRegen} onClick={handleRegenerate}>
-                Перегенерировать
-              </button>
-              <button className={styles.btnDelete} onClick={handleDelete}>
-                Удалить
-              </button>
-            </div>
-          )}
+          <div className={styles.actions}>
+            <button className={styles.btnSave} onClick={handleDownload}>
+              Сохранить
+            </button>
+            {isOwner && (
+              <>
+                <button className={styles.btnRegen} onClick={handleRegenerate}>
+                  Перегенерировать
+                </button>
+                <button className={styles.btnDelete} onClick={handleDelete}>
+                  Удалить
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

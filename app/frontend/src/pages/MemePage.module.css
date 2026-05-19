@@ -54,6 +54,7 @@
   .layout {
     flex-direction: column;
     height: auto;
+    align-self: flex-start;
     padding: 16px;
     gap: 8px;
   }
@@ -113,6 +114,7 @@
   margin-top: 8px;
 }
 
+.btnSave,
 .btnRegen {
   background: #222;
   color: #ccc;
@@ -123,6 +125,7 @@
   cursor: pointer;
   transition: background 0.15s;
 }
+.btnSave:hover,
 .btnRegen:hover { background: #2a2a2a; }
 
 .btnDelete {
