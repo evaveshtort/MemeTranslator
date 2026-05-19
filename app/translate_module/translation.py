@@ -1,8 +1,8 @@
-from ollama import Client
+from ollama import AsyncClient
 import httpx
 import os
 
-client = Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
+client = AsyncClient(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
 
 _YANDEX_URL = "https://translate.api.cloud.yandex.net/translate/v2/translate"
 
@@ -170,8 +170,8 @@ FINAL CHECK:
 """
 
 
-def translate_meme(ocr: dict, analysis_text: str, literal: str = "") -> str:
-    response = client.chat(
+async def translate_meme(ocr: dict, analysis_text: str, literal: str = "") -> str:
+    response = await client.chat(
         model="qwen2.5:7b-instruct",
         messages=[{"role": "user", "content": make_translation_prompt(analysis_text, ocr, literal)}],
         options={"temperature": 0.3},

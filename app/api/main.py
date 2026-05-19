@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
@@ -362,14 +362,12 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: st
     )
 
     try:
-        translate_result, _ = await call_with_retry(translate, img, clean_img, ocr_result, description)
+        translate_result, translate_retries = await call_with_retry(translate, img, clean_img, ocr_result, description)
     except RetryError as e:
         last = e.last_result or {}
         await _update(record_id,
                       humor_analysis=last.get("analysis"),
                       literal_translation=last.get("literal_translation"),
-                      humor_analysis_retries=last.get("humor_retries", 0),
-                      translation_retries=last.get("translation_retries", 0),
                       explanation_ru=last.get("explanation_ru"),
                       explanation_en=last.get("explanation_en"),
                       full_text_en=last.get("full_text_en"),
@@ -384,8 +382,7 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: st
         translate_done_at=datetime.now(timezone.utc),
         humor_analysis=translate_result.get("analysis"),
         literal_translation=translate_result.get("literal_translation"),
-        humor_analysis_retries=translate_result.get("humor_retries", 0),
-        translation_retries=translate_result.get("translation_retries", 0),
+        translation_retries=translate_retries,
         explanation_ru=translate_result.get("explanation_ru"),
         explanation_en=translate_result.get("explanation_en"),
         full_text_en=translate_result.get("full_text_en"),
@@ -612,9 +609,12 @@ async def regenerate_meme(card_id: uuid.UUID, user=Depends(required_user)):
 
 
 @app.get("/memes/{card_id}/events")
-async def meme_events(card_id: uuid.UUID):
+async def meme_events(card_id: uuid.UUID, request: Request):
     async def stream():
         while True:
+            if await request.is_disconnected():
+                break
+
             async with AsyncSessionLocal() as session:
                 result = await session.execute(
                     select(MemeRequest)

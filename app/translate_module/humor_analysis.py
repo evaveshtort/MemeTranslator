@@ -1,5 +1,6 @@
-from ollama import Client
+from ollama import AsyncClient
 import os
+
 
 def make_reasoning_promt(ocr_blocks, visual_context):
     return f"""
@@ -71,10 +72,12 @@ FINAL RULES:
 - Do NOT include formatting words ("Write", "Explain", etc.)
 """
 
-client = Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
 
-def analyse_humor(ocr_blocks: str, visual_context: str) -> str:
-    response = client.chat(
+client = AsyncClient(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
+
+
+async def analyse_humor(ocr_blocks: str, visual_context: str) -> str:
+    response = await client.chat(
         model="qwen2.5:7b-instruct",
         messages=[{"role": "user", "content": make_reasoning_promt(ocr_blocks, visual_context)}]
     )

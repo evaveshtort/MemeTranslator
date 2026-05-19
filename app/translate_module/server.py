@@ -11,7 +11,6 @@ from .translation import translate_meme, literal_translate
 from .text_adding import add_translated_text
 
 app = FastAPI()
-MAX_RETRIES = 3
 
 
 def strip_json_markdown(text: str) -> str:
@@ -75,48 +74,30 @@ async def api_translate(
     ocr_texts = [b["text"] for b in ocr_data.get("blocks", [])]
     literal = literal_translate(ocr_texts)
 
-    analysis_text = None
-    last_err = None
-    humor_retries = 0
-    for _ in range(MAX_RETRIES):
-        try:
-            result = analyse_humor(str(ocr_data.get("blocks", [])), caption)
-            if not result or len(result.strip()) < 10:
-                raise ValueError("Result too short")
-            if has_non_latin_letters(result):
-                raise ValueError("Analysis contains non-Latin letters (must be English only)")
-            analysis_text = result
-            break
-        except Exception as e:
-            last_err = e
-            humor_retries += 1
-    if analysis_text is None:
+    try:
+        result = await analyse_humor(str(ocr_data.get("blocks", [])), caption)
+        if not result or len(result.strip()) < 10:
+            raise ValueError("Result too short")
+        if has_non_latin_letters(result):
+            raise ValueError("Analysis contains non-Latin letters (must be English only)")
+        analysis_text = result
+    except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"error": f"не удалось проанализировать юмор ({last_err})"},
+            content={"error": f"не удалось проанализировать юмор ({e})"},
         )
 
-
-    translation_data = None
-    last_err = None
-    translation_retries = 0
-    for _ in range(MAX_RETRIES):
-        try:
-            raw = translate_meme(ocr_data, analysis_text, literal)
-            raw = strip_json_markdown(raw)
-            if not raw:
-                raise ValueError("Empty result")
-            parsed = json.loads(raw)
-            validate_translation(parsed)
-            translation_data = parsed
-            break
-        except Exception as e:
-            last_err = e
-            translation_retries += 1
-    if translation_data is None:
+    try:
+        raw = await translate_meme(ocr_data, analysis_text, literal)
+        raw = strip_json_markdown(raw)
+        if not raw:
+            raise ValueError("Empty result")
+        translation_data = json.loads(raw)
+        validate_translation(translation_data)
+    except Exception as e:
         return JSONResponse(
             status_code=500,
-            content={"error": f"не удалось перевести текст мема ({last_err})"},
+            content={"error": f"не удалось перевести текст мема ({e})"},
         )
 
     try:
@@ -138,6 +119,6 @@ async def api_translate(
         "full_text_en": translation_data.get("full_text_en"),
         "blocks_en": translation_data.get("blocks_en"),
         "result_image_base64": result_base64,
-        "humor_retries": humor_retries,
-        "translation_retries": translation_retries,
+        "humor_retries": 0,
+        "translation_retries": 0,
     }

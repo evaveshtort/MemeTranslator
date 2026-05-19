@@ -52,6 +52,7 @@ export default function MemePage() {
   const imgRef = useRef(null)
   const rightPaneRef = useRef(null)
   const imagePaneRef = useRef(null)
+  const esRef = useRef(null)
 
   const adjustLayout = useCallback(() => {
     const img = imgRef.current
@@ -94,27 +95,37 @@ export default function MemePage() {
       setMeme(data)
       if (data.status === 'processing' || data.status === 'queued') startSSE()
     }).catch(() => navigate('/'))
+    return () => {
+      if (esRef.current) {
+        esRef.current.close()
+        esRef.current = null
+      }
+    }
   }, [cardId])
 
   function startSSE() {
+    if (esRef.current) esRef.current.close()
     setProcessing(true)
     const es = openEventSource(cardId)
+    esRef.current = es
     es.onmessage = (e) => {
       const data = JSON.parse(e.data)
       setCurrentStep(data.current_step)
       if (data.queue_position !== undefined) setQueuePosition(data.queue_position)
-      if (data.status === 'success') {
+      if (data.status === 'success' || data.status === 'error') {
         es.close()
-        setProcessing(false)
-        fetchMeme(cardId).then(setMeme)
-      } else if (data.status === 'error') {
-        es.close()
-        setProcessing(false)
-        fetchMeme(cardId).then(setMeme)
+        esRef.current = null
+        fetchMeme(cardId).then(fresh => {
+          setMeme(fresh)
+          setProcessing(false)
+        })
       }
     }
-    es.onerror = () => { es.close(); setProcessing(false) }
-    return () => es.close()
+    es.onerror = () => {
+      es.close()
+      esRef.current = null
+      setProcessing(false)
+    }
   }
 
   async function handleDelete() {
