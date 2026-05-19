@@ -199,3 +199,110 @@
 
 .authLinks a:hover { color: #fff; border-color: #555; }
 .authLinks a.active { color: #fff; border-color: #555; }
+
+.burger {
+  display: none;
+  background: none;
+  border: none;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.burgerIcon {
+  position: relative;
+  width: 20px;
+  height: 14px;
+  display: inline-block;
+}
+
+.burgerIcon span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ccc;
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s, top 0.2s;
+}
+
+.burgerIcon span:nth-child(1) { top: 0; }
+.burgerIcon span:nth-child(2) { top: 6px; }
+.burgerIcon span:nth-child(3) { top: 12px; }
+
+.burgerOpen span:nth-child(1) { top: 6px; transform: rotate(45deg); }
+.burgerOpen span:nth-child(2) { opacity: 0; }
+.burgerOpen span:nth-child(3) { top: 6px; transform: rotate(-45deg); }
+
+.menuOverlay {
+  position: fixed;
+  top: 52px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 90;
+}
+
+.mobileMenu {
+  position: fixed;
+  top: 52px;
+  left: 0;
+  right: 0;
+  background: #181818;
+  border-bottom: 1px solid #222;
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 95;
+}
+
+.mobileMenu a {
+  color: #aaa;
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  padding: 10px 8px;
+  border-radius: 6px;
+}
+
+.mobileMenu a.active { color: #fff; background: #222; }
+
+.menuDivider {
+  height: 1px;
+  background: #2a2a2a;
+  margin: 6px 0;
+}
+
+.menuEmail {
+  color: #666;
+  font-size: 13px;
+  padding: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menuLogout {
+  background: none;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #aaa;
+  font-size: 14px;
+  padding: 10px 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+@media (max-width: 768px) {
+  .burger { display: inline-flex; }
+  .tabs { display: none; }
+  .userMenu { display: none; }
+  .authLinks { display: none; }
+  .header { padding: 0 14px; }
+  .right { gap: 12px; }
+}

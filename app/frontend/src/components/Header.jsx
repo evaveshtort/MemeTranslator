@@ -8,11 +8,15 @@ export default function Header() {
   const { user, logout } = useContext(AuthContext)
   const navigate = useNavigate()
   const [showHelp, setShowHelp] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   function handleLogout() {
     logout()
+    setMenuOpen(false)
     navigate('/')
   }
+
+  const closeMenu = () => setMenuOpen(false)
 
   return (
     <>
@@ -32,6 +36,15 @@ export default function Header() {
       </div>
     )}
     <header className={styles.header}>
+      <button
+        className={styles.burger}
+        onClick={() => setMenuOpen(o => !o)}
+        aria-label="Меню"
+      >
+        <span className={`${styles.burgerIcon} ${menuOpen ? styles.burgerOpen : ''}`}>
+          <span /><span /><span />
+        </span>
+      </button>
       <nav className={styles.tabs}>
         <NavLink to="/" end className={({ isActive }) => isActive ? styles.active : ''}>
           Все мемы
@@ -71,6 +84,40 @@ export default function Header() {
           </div>
         )}
       </div>
+      {menuOpen && (
+        <>
+          <div className={styles.menuOverlay} onClick={closeMenu} />
+          <div className={styles.mobileMenu}>
+            <NavLink to="/" end onClick={closeMenu} className={({ isActive }) => isActive ? styles.active : ''}>
+              Все мемы
+            </NavLink>
+            {user && (
+              <>
+                <NavLink to="/my" onClick={closeMenu} className={({ isActive }) => isActive ? styles.active : ''}>
+                  Мои мемы
+                </NavLink>
+                <NavLink to="/upload" onClick={closeMenu} className={({ isActive }) => isActive ? styles.active : ''}>
+                  Загрузить
+                </NavLink>
+                <div className={styles.menuDivider} />
+                <span className={styles.menuEmail}>{user.email}</span>
+                <button className={styles.menuLogout} onClick={handleLogout}>Выйти</button>
+              </>
+            )}
+            {!user && (
+              <>
+                <div className={styles.menuDivider} />
+                <NavLink to="/login" onClick={closeMenu} className={({ isActive }) => isActive ? styles.active : ''}>
+                  Войти
+                </NavLink>
+                <NavLink to="/register" onClick={closeMenu} className={({ isActive }) => isActive ? styles.active : ''}>
+                  Регистрация
+                </NavLink>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </header>
     </>
   )
