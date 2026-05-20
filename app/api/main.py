@@ -58,7 +58,18 @@ class RetryError(Exception):
 
 _pending_images: dict[uuid.UUID, bytes] = {}
 _last_processed_user: str | None = None
-_worker_event: asyncio.Event = None 
+_worker_event: asyncio.Event = None
+
+
+class _Cancelled(Exception):
+    pass
+
+
+async def _raise_if_cancelled(record_id: uuid.UUID) -> None:
+    async with AsyncSessionLocal() as session:
+        record = await session.get(MemeRequest, record_id)
+        if record is None or record.deleted:
+            raise _Cancelled()
 
 _embed_model = None
 
@@ -160,10 +171,15 @@ async def _worker_loop():
         await _update(record.id, status="processing", current_step="ocr")
         try:
             await run_pipeline(record.id, raw, preset_original_url=record.original_image_url)
+        except _Cancelled:
+            pass
         except Exception as e:
             await _update(record.id, status="error", current_step="error",
                           error=f"pipeline: {e}")
-        await _reconcile_regen(record.id)
+        try:
+            await _reconcile_regen(record.id)
+        except Exception as e:
+            print(f"reconcile failed: {e}", file=sys.stderr)
 
 
 @asynccontextmanager
@@ -338,6 +354,7 @@ def _meme_to_dict(r: MemeRequest) -> dict:
 async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: str | None = None) -> None:
     img = Image.open(io.BytesIO(raw))
 
+    await _raise_if_cancelled(record_id)
     await _update(record_id, current_step="ocr")
     try:
         ocr_result, ocr_retries = await call_with_retry(ocr, img, validate=_validate_ocr)
@@ -359,6 +376,7 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: st
     )
 
 
+    await _raise_if_cancelled(record_id)
     try:
         clean_img, _ = await call_with_retry(remove_text, img, ocr_result["blocks"])
     except Exception as e:
@@ -371,6 +389,7 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: st
     )
 
 
+    await _raise_if_cancelled(record_id)
     try:
         description, caption_retries = await call_with_retry(caption, clean_img, validate=_validate_caption)
     except RetryError as e:
@@ -389,6 +408,7 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: st
         current_step="translate",
     )
 
+    await _raise_if_cancelled(record_id)
     try:
         translate_result, translate_retries = await call_with_retry(translate, img, clean_img, ocr_result, description)
     except RetryError as e:
@@ -418,6 +438,7 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: st
         current_step="upload",
     )
 
+    await _raise_if_cancelled(record_id)
     # S3
     try:
         original_url = preset_original_url or upload_image(Image.open(io.BytesIO(raw)), folder="memes/original")
