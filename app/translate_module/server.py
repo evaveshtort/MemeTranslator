@@ -95,13 +95,35 @@ async def api_translate(
         if not raw:
             raise ValueError("Empty result")
         translation_data = json.loads(raw)
-        validate_translation(translation_data)
     except Exception as e:
         traceback.print_exc()
         return JSONResponse(
             status_code=500,
             content={"error": f"не удалось перевести текст мема ({e})"},
         )
+
+    validation_error = None
+    try:
+        validate_translation(translation_data)
+    except Exception as e:
+        traceback.print_exc()
+        validation_error = str(e)
+
+    partial = {
+        "analysis": analysis_text,
+        "literal_translation": literal,
+        "explanation_ru": translation_data.get("explanation_ru"),
+        "explanation_en": translation_data.get("explanation_en"),
+        "full_text_en": translation_data.get("full_text_en"),
+        "blocks_en": translation_data.get("blocks_en"),
+        "result_image_base64": None,
+        "humor_retries": 0,
+        "translation_retries": 0,
+    }
+
+    if validation_error:
+        partial["validation_error"] = validation_error
+        return partial
 
     try:
         result_img = add_translated_text(
@@ -113,16 +135,5 @@ async def api_translate(
 
     buf = io.BytesIO()
     result_img.save(buf, format="PNG")
-    result_base64 = base64.b64encode(buf.getvalue()).decode()
-
-    return {
-        "analysis": analysis_text,
-        "literal_translation": literal,
-        "explanation_ru": translation_data.get("explanation_ru"),
-        "explanation_en": translation_data.get("explanation_en"),
-        "full_text_en": translation_data.get("full_text_en"),
-        "blocks_en": translation_data.get("blocks_en"),
-        "result_image_base64": result_base64,
-        "humor_retries": 0,
-        "translation_retries": 0,
-    }
+    partial["result_image_base64"] = base64.b64encode(buf.getvalue()).decode()
+    return partial

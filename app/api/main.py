@@ -227,6 +227,12 @@ def _validate_caption(text_val: str) -> None:
         raise ValueError("не удалось получить описание изображения")
 
 
+def _validate_translate(result: dict) -> None:
+    err = result.get("validation_error")
+    if err:
+        raise ValueError(err)
+
+
 async def call_with_retry(fn, *args, validate=None, **kwargs):
     last_err = None
     last_result = None
@@ -410,7 +416,7 @@ async def run_pipeline(record_id: uuid.UUID, raw: bytes, preset_original_url: st
 
     await _raise_if_cancelled(record_id)
     try:
-        translate_result, translate_retries = await call_with_retry(translate, img, clean_img, ocr_result, description)
+        translate_result, translate_retries = await call_with_retry(translate, img, clean_img, ocr_result, description, validate=_validate_translate)
     except RetryError as e:
         last = e.last_result or {}
         await _update(record_id,
