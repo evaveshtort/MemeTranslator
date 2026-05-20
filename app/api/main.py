@@ -218,7 +218,7 @@ def _validate_ocr(result: dict) -> None:
     letters = [ch for ch in text if unicodedata.category(ch).startswith("L")]
     if letters:
         cyrillic_ratio = sum(1 for ch in letters if "Ѐ" <= ch <= "ӿ") / len(letters)
-        if cyrillic_ratio < 0.9:
+        if cyrillic_ratio < 0.7:
             raise ValueError("текст на картинке не на русском языке")
 
 
