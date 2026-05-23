@@ -65,6 +65,26 @@ OCR BLOCKS (ONLY text to translate):
 
 ----------------------------------------
 
+PROCESS (follow exactly in this order):
+
+STEP A — write full_text_en
+- Read all OCR BLOCKS as ONE Russian text (in given order)
+- Translate it as ONE fluent English text
+- Write the result to full_text_en
+- full_text_en MUST be your English translation
+- full_text_en MUST NOT be a copy of OCR BLOCKS
+- full_text_en MUST NOT contain any Russian letter — if it does, the answer is wrong
+
+STEP B — split full_text_en into blocks_en
+- Take full_text_en (the English text you just wrote)
+- Split it into {len(blocks)} parts matching the original OCR blocks
+- Each blocks_en[i].text = the part of full_text_en that corresponds to OCR block i
+- The concatenation of blocks_en[*].text MUST equal full_text_en
+- Do NOT translate blocks again — only split the already-translated full_text_en
+- Keep the same order and copy coords exactly
+
+----------------------------------------
+
 1. TRANSLATION
 
 - Translate ONLY text from OCR BLOCKS
@@ -102,8 +122,10 @@ ADAPTATION:
 - Number of blocks: {len(blocks)}
 - Keep same order
 - Copy coords exactly: {coords_list}
-- Each block = its part of the sentence
+- Each block = its part of full_text_en (split, NOT re-translate)
+- Concatenation of all blocks_en[*].text MUST equal full_text_en
 - Do NOT duplicate text across blocks
+- Do NOT leave Russian in any block — they come from full_text_en, which is English
 
 ----------------------------------------
 
@@ -160,12 +182,14 @@ OUTPUT JSON:
 FINAL CHECK:
 
 - Valid JSON
+- full_text_en is YOUR English translation (NOT a copy of OCR BLOCKS, NOT Russian)
+- blocks_en are parts of full_text_en (split, not re-translated)
+- joined blocks_en[*].text == full_text_en
 - English only in *_en fields (no Russian, no Chinese, no other non-Latin scripts)
 - English words are existing, english grammar is correct
 - Russian only in *_ru fields (no English, no Chinese, no other non-Cyrillic scripts)
 - Russian words are existing, russian grammar is correct
 - No invented words
-- full_text_en == joined blocks
 - coords unchanged
 """
 
