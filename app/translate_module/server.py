@@ -47,20 +47,20 @@ def validate_translation(data: dict) -> None:
         if not isinstance(value, str):
             continue
         if key.endswith("_en") and has_non_latin_letters(value):
-            errors.append(f"{key} contains non-Latin letters")
+            errors.append(f"в поле {key} остался нелатинский текст")
         if key.endswith("_ru") and has_non_cyrillic_letters(value):
-            errors.append(f"{key} contains non-Cyrillic letters")
+            errors.append(f"в поле {key} остался текст не на кириллице")
     for i, block in enumerate(data.get("blocks_en", [])):
         text = block.get("text", "")
         if has_non_latin_letters(text):
-            errors.append(f"blocks_en[{i}].text contains non-Latin letters")
+            errors.append(f"в блоке перевода №{i + 1} остался нелатинский текст")
     full_text = data.get("full_text_en", "").strip()
     for i, block in enumerate(data.get("blocks_en", [])):
         block_text = block.get("text", "").strip()
         if block_text and block_text not in full_text:
-            errors.append(f"blocks_en[{i}].text not found in full_text_en: '{block_text}'")
+            errors.append(f"текст блока перевода №{i + 1} не входит в общий перевод: «{block_text}»")
     if errors:
-        raise ValueError(f"Validation errors: {errors}")
+        raise ValueError("; ".join(errors))
 
 
 @app.post("/translate")
@@ -87,9 +87,9 @@ async def api_translate(
                 seed=random.randint(0, 2**31 - 1),
             )
             if not result or len(result.strip()) < 10:
-                raise ValueError("Result too short")
+                raise ValueError("получен слишком короткий ответ")
             if has_non_latin_letters(result):
-                raise ValueError("Analysis contains non-Latin letters (must be English only)")
+                raise ValueError("в ответе остался нелатинский текст")
             analysis_text = result
             break
         except Exception as e:
@@ -113,7 +113,7 @@ async def api_translate(
             )
             raw = strip_json_markdown(raw)
             if not raw:
-                raise ValueError("Empty result")
+                raise ValueError("получен пустой ответ")
             parsed = json.loads(raw)
             try:
                 validate_translation(parsed)

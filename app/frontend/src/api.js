@@ -18,7 +18,7 @@ async function apiFetch(url, options = {}) {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     window.location.href = '/login'
-    throw new Error('Unauthorized')
+    throw new Error('Требуется авторизация')
   }
   return res
 }
@@ -29,7 +29,7 @@ export async function loginUser(email, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-  if (!r.ok) throw new Error((await r.json()).detail || 'Login failed')
+  if (!r.ok) throw new Error((await r.json()).detail || 'Не удалось войти')
   return r.json()
 }
 
@@ -39,25 +39,25 @@ export async function registerUser(email, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
   })
-  if (!r.ok) throw new Error((await r.json()).detail || 'Registration failed')
+  if (!r.ok) throw new Error((await r.json()).detail || 'Не удалось зарегистрироваться')
   return r.json()
 }
 
 export async function fetchMemes() {
   const r = await fetch(`${BASE}/memes`)
-  if (!r.ok) throw new Error('Failed to fetch memes')
+  if (!r.ok) throw new Error('Не удалось загрузить список мемов')
   return r.json()
 }
 
 export async function fetchMyMemes() {
   const r = await apiFetch(`${BASE}/memes/my`)
-  if (!r.ok) throw new Error('Failed to fetch my memes')
+  if (!r.ok) throw new Error('Не удалось загрузить ваши мемы')
   return r.json()
 }
 
 export async function fetchMeme(cardId) {
   const r = await fetch(`${BASE}/memes/${cardId}`)
-  if (!r.ok) throw new Error('Failed to fetch meme')
+  if (!r.ok) throw new Error('Не удалось загрузить мем')
   return r.json()
 }
 
@@ -65,24 +65,24 @@ export async function uploadMeme(file) {
   const form = new FormData()
   form.append('file', file)
   const r = await apiFetch(`${BASE}/process`, { method: 'POST', body: form })
-  if (!r.ok) throw new Error('Upload failed')
+  if (!r.ok) throw new Error('Не удалось загрузить изображение')
   return r.json()
 }
 
 export async function searchMemes(q) {
   const r = await fetch(`${BASE}/memes/search?q=${encodeURIComponent(q)}`)
-  if (!r.ok) throw new Error('Search failed')
+  if (!r.ok) throw new Error('Не удалось выполнить поиск')
   return r.json()
 }
 
 export async function deleteMeme(cardId) {
   const r = await apiFetch(`${BASE}/memes/${cardId}`, { method: 'DELETE' })
-  if (!r.ok) throw new Error('Delete failed')
+  if (!r.ok) throw new Error('Не удалось удалить мем')
 }
 
 export async function regenerateMeme(cardId) {
   const r = await apiFetch(`${BASE}/memes/${cardId}/regenerate`, { method: 'POST' })
-  if (!r.ok) throw new Error('Regenerate failed')
+  if (!r.ok) throw new Error('Не удалось запустить перегенерацию')
   return r.json()
 }
 

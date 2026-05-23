@@ -44,7 +44,7 @@ async def optional_user(token: str | None = Depends(oauth2_scheme)):
 
 async def required_user(user=Depends(optional_user)):
     if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
     return user
 
 MAX_RETRIES = 3
@@ -603,7 +603,7 @@ async def get_meme(card_id: uuid.UUID):
         )
         record = result.scalar_one_or_none()
     if not record:
-        return JSONResponse(status_code=404, content={"error": "not found"})
+        return JSONResponse(status_code=404, content={"error": "Мем не найден"})
     return _meme_to_dict(record)
 
 
@@ -620,7 +620,7 @@ async def delete_meme(card_id: uuid.UUID, user=Depends(required_user)):
         if not record:
             return
         if record.user_id is None or str(record.user_id) != user["id"]:
-            raise HTTPException(status_code=403, detail="Forbidden")
+            raise HTTPException(status_code=403, detail="Доступ запрещён")
         _pending_images.pop(record.id, None)
         record.deleted = True
         await session.commit()
@@ -637,9 +637,9 @@ async def regenerate_meme(card_id: uuid.UUID, user=Depends(required_user)):
         )
         old = result.scalar_one_or_none()
         if not old:
-            return JSONResponse(status_code=404, content={"error": "not found"})
+            return JSONResponse(status_code=404, content={"error": "Мем не найден"})
         if old.user_id is None or str(old.user_id) != user["id"]:
-            raise HTTPException(status_code=403, detail="Forbidden")
+            raise HTTPException(status_code=403, detail="Доступ запрещён")
         original_url = old.original_image_url
 
     async with httpx.AsyncClient(timeout=60) as client:
@@ -672,11 +672,11 @@ async def download_meme(card_id: uuid.UUID, lang: str = "en"):
         )
         record = result.scalar_one_or_none()
     if not record:
-        raise HTTPException(status_code=404, detail="not found")
+        raise HTTPException(status_code=404, detail="Мем не найден")
 
     url = record.original_image_url if lang == "ru" else record.result_image_url
     if not url:
-        raise HTTPException(status_code=404, detail="image not available")
+        raise HTTPException(status_code=404, detail="Изображение недоступно")
 
     ext = (url.split("?")[0].rsplit(".", 1)[-1] or "jpg").lower()
     filename = f"meme-{card_id}-{lang}.{ext}"
@@ -735,7 +735,7 @@ async def register(body: AuthBody):
             select(User).where(User.email == body.email.lower())
         )
         if existing.scalar_one_or_none():
-            raise HTTPException(status_code=409, detail="Email already registered")
+            raise HTTPException(status_code=409, detail="Пользователь с таким email уже зарегистрирован")
         user = User(
             email=body.email.lower(),
             password_hash=hash_password(body.password),
@@ -756,6 +756,6 @@ async def login(body: AuthBody):
         )
         user = result.scalar_one_or_none()
     if not user or not verify_password(body.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
+        raise HTTPException(status_code=401, detail="Неверный email или пароль")
     token = create_token(str(user.id), user.email)
     return {"token": token, "user": {"id": str(user.id), "email": user.email}}
