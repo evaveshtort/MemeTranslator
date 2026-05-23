@@ -76,9 +76,11 @@ FINAL RULES:
 client = AsyncClient(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
 
 
-async def analyse_humor(ocr_blocks: str, visual_context: str) -> str:
+async def analyse_humor(ocr_blocks: str, visual_context: str, seed: int | None = None) -> str:
+    options = {"seed": seed} if seed is not None else {}
     response = await client.chat(
         model="qwen2.5:7b-instruct",
-        messages=[{"role": "user", "content": make_reasoning_promt(ocr_blocks, visual_context)}]
+        messages=[{"role": "user", "content": make_reasoning_promt(ocr_blocks, visual_context)}],
+        options=options,
     )
     return response.message.content

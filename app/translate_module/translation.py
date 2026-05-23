@@ -170,10 +170,13 @@ FINAL CHECK:
 """
 
 
-async def translate_meme(ocr: dict, analysis_text: str, literal: str = "") -> str:
+async def translate_meme(ocr: dict, analysis_text: str, literal: str = "", seed: int | None = None) -> str:
+    options = {"temperature": 0.3}
+    if seed is not None:
+        options["seed"] = seed
     response = await client.chat(
         model="qwen2.5:7b-instruct",
         messages=[{"role": "user", "content": make_translation_prompt(analysis_text, ocr, literal)}],
-        options={"temperature": 0.3},
+        options=options,
     )
     return response.message.content

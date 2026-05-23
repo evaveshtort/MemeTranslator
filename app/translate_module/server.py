@@ -4,6 +4,7 @@ from PIL import Image
 import io
 import json
 import base64
+import random
 import traceback
 import unicodedata
 
@@ -12,6 +13,7 @@ from .translation import translate_meme, literal_translate
 from .text_adding import add_translated_text
 
 app = FastAPI()
+MAX_RETRIES = 3
 
 
 def strip_json_markdown(text: str) -> str:
@@ -75,39 +77,64 @@ async def api_translate(
     ocr_texts = [b["text"] for b in ocr_data.get("blocks", [])]
     literal = literal_translate(ocr_texts)
 
-    try:
-        result = await analyse_humor(str(ocr_data.get("blocks", [])), caption)
-        if not result or len(result.strip()) < 10:
-            raise ValueError("Result too short")
-        if has_non_latin_letters(result):
-            raise ValueError("Analysis contains non-Latin letters (must be English only)")
-        analysis_text = result
-    except Exception as e:
-        traceback.print_exc()
+    analysis_text = None
+    last_err = None
+    humor_retries = 0
+    for _ in range(MAX_RETRIES):
+        try:
+            result = await analyse_humor(
+                str(ocr_data.get("blocks", [])), caption,
+                seed=random.randint(0, 2**31 - 1),
+            )
+            if not result or len(result.strip()) < 10:
+                raise ValueError("Result too short")
+            if has_non_latin_letters(result):
+                raise ValueError("Analysis contains non-Latin letters (must be English only)")
+            analysis_text = result
+            break
+        except Exception as e:
+            traceback.print_exc()
+            last_err = e
+            humor_retries += 1
+    if analysis_text is None:
         return JSONResponse(
             status_code=500,
-            content={"error": f"не удалось проанализировать юмор ({e})"},
+            content={"error": f"не удалось проанализировать юмор ({last_err})"},
         )
 
-    try:
-        raw = await translate_meme(ocr_data, analysis_text, literal)
-        raw = strip_json_markdown(raw)
-        if not raw:
-            raise ValueError("Empty result")
-        translation_data = json.loads(raw)
-    except Exception as e:
-        traceback.print_exc()
+    translation_data = None
+    last_err = None
+    translation_retries = 0
+    for _ in range(MAX_RETRIES):
+        try:
+            raw = await translate_meme(
+                ocr_data, analysis_text, literal,
+                seed=random.randint(0, 2**31 - 1),
+            )
+            raw = strip_json_markdown(raw)
+            if not raw:
+                raise ValueError("Empty result")
+            parsed = json.loads(raw)
+            try:
+                validate_translation(parsed)
+                translation_data = parsed
+                last_err = None
+                break
+            except Exception as ve:
+                traceback.print_exc()
+                translation_data = parsed
+                last_err = ve
+                translation_retries += 1
+        except Exception as e:
+            traceback.print_exc()
+            last_err = e
+            translation_retries += 1
+
+    if translation_data is None:
         return JSONResponse(
             status_code=500,
-            content={"error": f"не удалось перевести текст мема ({e})"},
+            content={"error": f"не удалось перевести текст мема ({last_err})"},
         )
-
-    validation_error = None
-    try:
-        validate_translation(translation_data)
-    except Exception as e:
-        traceback.print_exc()
-        validation_error = str(e)
 
     partial = {
         "analysis": analysis_text,
@@ -117,12 +144,12 @@ async def api_translate(
         "full_text_en": translation_data.get("full_text_en"),
         "blocks_en": translation_data.get("blocks_en"),
         "result_image_base64": None,
-        "humor_retries": 0,
-        "translation_retries": 0,
+        "humor_retries": humor_retries,
+        "translation_retries": translation_retries,
     }
 
-    if validation_error:
-        partial["validation_error"] = validation_error
+    if last_err is not None:
+        partial["validation_error"] = str(last_err)
         return partial
 
     try:
