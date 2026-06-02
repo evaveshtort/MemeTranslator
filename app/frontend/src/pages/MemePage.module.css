@@ -1,0 +1,265 @@
+.page {
+  min-height: 100vh;
+  padding-top: 52px;
+  display: flex;
+  justify-content: center;
+}
+
+.layout {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  height: calc(100vh - 52px);
+  padding: 20px 24px;
+  gap: 16px;
+  max-width: 1400px;
+  box-sizing: border-box;
+}
+
+.imagePane {
+  flex: 0 0 auto;
+  max-width: calc(100vw * 2 / 3);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
+}
+
+.sidebar {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.processingPane {
+  flex: 1;
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+    height: auto;
+    align-self: flex-start;
+    padding: 16px;
+    gap: 8px;
+  }
+
+  .imagePane {
+    align-self: center;
+    max-width: 100%;
+    justify-content: center;
+  }
+
+  .img {
+    max-width: 100%;
+    max-height: 80vh;
+    width: auto;
+    height: auto;
+  }
+
+  .sidebar {
+    min-width: unset;
+    overflow-y: visible;
+  }
+
+  .processingPane {
+    min-width: unset;
+  }
+
+  .processingLayout .processingPane { order: 1; }
+  .processingLayout .imagePane       { order: 2; }
+}
+
+.content {
+  width: 100%;
+  max-width: 680px;
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.text {
+  color: #ddd;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.explanation {
+  color: #888;
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btnSave,
+.btnRegen {
+  background: #222;
+  color: #ccc;
+  border: 1px solid #333;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnSave:hover,
+.btnRegen:hover { background: #2a2a2a; }
+
+.btnDelete {
+  background: transparent;
+  color: #e55;
+  border: 1px solid #442222;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btnDelete:hover { background: #1a0a0a; }
+
+.btnCancel {
+  background: transparent;
+  color: #888;
+  border: 1px solid #333;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  align-self: flex-start;
+}
+.btnCancel:hover { background: #1a1a1a; color: #ccc; }
+
+button:disabled { opacity: 0.4; cursor: default; }
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding-top: 120px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #333;
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progressBox {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #444;
+  font-size: 14px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #333;
+  flex-shrink: 0;
+}
+
+.step.done { color: #666; }
+.step.done .dot { background: #555; }
+
+.step.active { color: #fff; }
+.step.active .dot {
+  background: #fff;
+  box-shadow: 0 0 6px #fff8;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.queueInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 0;
+}
+
+.queueTitle {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.queueCount {
+  color: #aaa;
+  font-size: 14px;
+}
+
+.errorBox {
+  background: #1a0808;
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.errorThumb {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.errorTitle {
+  color: #e55;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.errorDetail {
+  color: #c88;
+  font-size: 13px;
+  line-height: 1.5;
+}

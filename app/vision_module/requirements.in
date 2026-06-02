@@ -1,0 +1,8 @@
+iopaint
+fastapi
+uvicorn
+pillow
+numpy
+opencv-python
+ollama
+python-multipart

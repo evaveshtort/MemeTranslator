@@ -1,0 +1,7 @@
+surya-ocr==0.16.0
+fastapi
+uvicorn
+numpy
+opencv-python
+pillow
+python-multipart

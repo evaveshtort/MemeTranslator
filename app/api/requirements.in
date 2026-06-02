@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+pillow
+httpx
+python-multipart
+boto3
+sqlalchemy[asyncio]
+asyncpg
+fastembed
+pgvector
+python-jose[cryptography]
+bcrypt
